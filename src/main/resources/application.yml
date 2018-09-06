@@ -31,8 +31,8 @@ info:
     name: ${spring.application.name}
     version: ${parent.version}
 
-logging:
-  level:
-    org.springframework: debug
+#logging:
+#  level:
+#    org.springframework: debug
 
 
