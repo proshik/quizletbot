@@ -35,4 +35,5 @@ logging:
   level:
     org.springframework: debug
 
-
+quizlet:
+    client-id: ${QUIZLET_CLIENT_ID}
