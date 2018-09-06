@@ -7,14 +7,14 @@ DROP TABLE IF EXISTS account CASCADE;
 
 create table if not exists users
 (
-  id           serial,
+  id           serial primary key,
   created_date timestamp default now(),
   char_id      text UNIQUE NOT NULL
 );
 
 create table if not exists account
 (
-  id           serial,
+  id           serial primary key,
   created_date timestamp default now(),
   login        text UNIQUE NOT NULL,
   access_token text,
