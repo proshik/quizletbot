@@ -17,6 +17,5 @@ data class Account(
                 parameters = [Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "users_id_seq")])
         val id: Long?,
         val createdDate: ZonedDateTime,
-        val chatId: String,
-        @OneToOne
+        val chatId: String
 )

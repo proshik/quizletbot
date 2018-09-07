@@ -31,7 +31,7 @@ class AuthenticationService(private val stateService: QuizletStateService,
         }
 
         // sent request to quizlet
-        val authorization = quizletClient.getAccessToken()
+        val authorization = quizletClient.accessToken(code)
         // save access_token to DB
 
         // get userId(chatId) to notify in the telegram by chatId
