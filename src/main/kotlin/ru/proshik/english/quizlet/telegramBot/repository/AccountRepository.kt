@@ -2,7 +2,7 @@ package ru.proshik.english.quizlet.telegramBot.repository
 
 import org.springframework.data.jpa.repository.JpaRepository
 import org.springframework.stereotype.Repository
-import ru.proshik.english.quizlet.telegramBot.repository.model.User
+import ru.proshik.english.quizlet.telegramBot.repository.model.Account
 
 @Repository
-interface UsersRepository : JpaRepository<User, Long>
+interface AccountRepository : JpaRepository<Account, Long>

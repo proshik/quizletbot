@@ -8,6 +8,8 @@ import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
 class UsersService(private val usersRepository: UsersRepository) {
 
     fun getInfo(): UserResp {
+        usersRepository
+
         return UserResp(chatId = "111")
     }
 

@@ -19,5 +19,7 @@ data class User(
         val createdDate: ZonedDateTime,
         val chatId: String,
         @MapsId
-        @OneToOne @JoinColumn(name = "provider_id") val account: Account?
+        @OneToOne(mappedBy = "user", optional = false, cascade = [CascadeType.ALL]) val account: Account?
 )
+
+
