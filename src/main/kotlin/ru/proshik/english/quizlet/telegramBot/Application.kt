@@ -5,10 +5,10 @@ import org.springframework.boot.autoconfigure.SpringBootApplication
 import org.springframework.boot.runApplication
 
 @SpringBootApplication
-class TelegramBotApplication
+class Application
 
 fun main(args: Array<String>) {
-    runApplication<TelegramBotApplication>(*args){
+    runApplication<Application>(*args){
         setBannerMode(Banner.Mode.OFF)
     }
 }
