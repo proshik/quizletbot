@@ -1,4 +1,4 @@
-package ru.proshik.english.quizlet.telegram_bot
+package ru.proshik.english.quizlet.telegramBot
 
 import org.junit.Ignore
 import org.junit.Test

@@ -1,6 +1,5 @@
-package ru.proshik.english.quizlet.telegram_bot.client
+package ru.proshik.english.quizlet.telegramBot.client
 
-import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import kotlin.test.assertNotNull
 
 /**

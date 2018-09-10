@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service
 @Service
 class TelegramService {
 
-    fun sendAuthConfirmMess(chatId: String) {
+    fun sendAuthConfirmationMessage(chatId: String) {
         // TODO implement it
         return
     }

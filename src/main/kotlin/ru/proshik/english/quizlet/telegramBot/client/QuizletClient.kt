@@ -54,14 +54,3 @@ class QuizletClient(@Value("\${quizlet.auth.secret}") private val secret: String
     }
 
 }
-
-//fun main(args: Array<String>) {
-//    val client = QuizletClient()
-//    client.secret = "secret"
-//    client.redirectUrl = "https://quizletsetsinfo.herokuapp.com/redirect"
-//
-//    val res = client.accessToken("9jAebjaGaNsYt3gB54DPMvMC8HhYq2cK93YmfnBq")
-//    val res = client.userGroups("Prokhor_Krylov", "accessToken")
-//    val res = client.userStudied("Prokhor_Krylov", "accessToken")
-//    println(res)
-//}

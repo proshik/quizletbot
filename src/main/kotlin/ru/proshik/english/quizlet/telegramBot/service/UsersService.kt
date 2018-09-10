@@ -13,11 +13,9 @@ class UsersService(private val usersRepository: UsersRepository,
 
     @Transactional
     fun create(chatId: String): String {
-
         val authUrl = authenticationService.generateAuthUrl(chatId)
 
         val user = User(ZonedDateTime.now(), chatId)
-
         usersRepository.save(user)
 
         return authUrl

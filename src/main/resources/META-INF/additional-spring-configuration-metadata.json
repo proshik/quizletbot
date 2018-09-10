@@ -1,0 +1,23 @@
+{
+  "properties": [
+    {
+      "name": "quizlet.client-id",
+      "type": "java.lang.String",
+      "description": "Description for quizlet.client-id."
+    },
+    {
+      "name": "quizlet.redirect-url",
+      "type": "java.lang.String",
+      "description": "Description for quizlet.redirect-url."
+    },
+    {
+      "name": "quizlet.auth.secret",
+      "type": "java.lang.String",
+      "description": "Description for quizlet.auth.secret."
+    },
+    {
+      "name": "quizlet.response-type",
+      "type": "java.lang.String",
+      "description": "Description for quizlet.response-type."
+    }
+  ] }

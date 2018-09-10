@@ -1,4 +1,4 @@
-package ru.proshik.english.quizlet.telegram_bot.client
+package ru.proshik.english.quizlet.telegramBot.client
 
 import com.github.kittinunf.fuel.core.Client
 import com.github.kittinunf.fuel.core.FuelManager
@@ -7,7 +7,6 @@ import com.github.kittinunf.fuel.core.Response
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.mockito.junit.MockitoJUnitRunner
-import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import java.io.ByteArrayInputStream
 import java.net.URL
 import kotlin.test.assertNotNull

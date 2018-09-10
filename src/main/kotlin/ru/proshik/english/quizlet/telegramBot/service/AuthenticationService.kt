@@ -54,7 +54,7 @@ class AuthenticationService(private val stateService: QuizletStateService,
         stateService.delete(state)
 
         // get userId(chatId) to notify in the telegram by chatId
-        telegramService.sendAuthConfirmMess(user.chatId)
+        telegramService.sendAuthConfirmationMessage(user.chatId)
     }
 
     fun generateAuthUrl(chatId: String): String {
