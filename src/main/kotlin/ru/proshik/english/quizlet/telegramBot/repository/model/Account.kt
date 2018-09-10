@@ -15,7 +15,15 @@ data class Account(
         @GenericGenerator(name = "users_id_seq",
                 strategy = "enhanced-sequence",
                 parameters = [Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "users_id_seq")])
-        val id: Long?,
+        val id: Long? = null,
+
         val createdDate: ZonedDateTime,
-        val chatId: String
+
+        val login: String,
+
+        @Column(name = "access_token")
+        val accessToken: String,
+
+        @OneToOne @MapsId
+        var user: User?
 )

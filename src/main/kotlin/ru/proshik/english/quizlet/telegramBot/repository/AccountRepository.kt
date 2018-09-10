@@ -5,5 +5,4 @@ import org.springframework.stereotype.Repository
 import ru.proshik.english.quizlet.telegramBot.repository.model.User
 
 @Repository
-interface UsersRepository : JpaRepository<User, Long> {
-}
+interface AccountRepository : JpaRepository<User, Long>

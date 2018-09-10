@@ -13,14 +13,14 @@ import ru.proshik.english.quizlet.telegramBot.service.UsersService
 class UsersController(private val usersService: UsersService,
                       private val authService: AuthenticationService) {
 
-    @GetMapping
-    fun getInfo(): UserResp {
-        return usersService.getInfo()
-    }
-
-    @GetMapping("auth")
-    fun auth(@RequestParam("login") login: String): String {
-        return authService.buildAuthUrl()
-    }
+//    @GetMapping
+//    fun getInfo(): UserResp {
+//        return usersService.getInfo()
+//    }
+//
+//    @GetMapping("auth")
+//    fun auth(@RequestParam("login") login: String): String {
+//        return authService.generateAuthUrl()
+//    }
 
 }

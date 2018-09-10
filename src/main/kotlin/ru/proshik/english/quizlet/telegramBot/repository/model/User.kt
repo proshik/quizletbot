@@ -15,9 +15,24 @@ data class User(
         @GenericGenerator(name = "users_id_seq",
                 strategy = "enhanced-sequence",
                 parameters = [Parameter(name = SEQUENCE_PARAM, value = "users_id_seq")])
-        val id: Long?,
+        val id: Long? = null,
+
         val createdDate: ZonedDateTime,
+
         val chatId: String,
-        @MapsId
-        @OneToOne @JoinColumn(name = "provider_id") val account: Account?
+
+        @OneToOne(mappedBy = "user", cascade = [CascadeType.ALL])
+        var account: Account?
 )
+//{
+//    fun set(account: Account?) {
+//        if (account == null) {
+//            if (this.account != null) {
+//                this.account!!.set(null)
+//            }
+//        } else {
+//            account.set(this)
+//        }
+//        this.account = account
+//    }
+//}
