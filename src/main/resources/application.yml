@@ -36,7 +36,9 @@ info:
 #    org.springframework: debug
 
 quizlet:
-    client-id: ${QUIZLET_CLIENT_ID:test}
+    client-id: ${QUIZLET_CLIENT_ID}
     response-type: code
     scope: read
     redirect-url: ${QUIZLET_REDIRECT_URL:localhost:8080/redirect}
+    auth:
+      secret: ${QUIZLET_AUTH_HEADER_SECRET}

@@ -7,8 +7,8 @@ import java.time.ZonedDateTime
 import javax.persistence.*
 
 
-@Entity
-@Table(name = "account")
+//@Entity
+//@Table(name = "account")
 data class Account(
         @Id
         @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "account_id_seq")
@@ -16,7 +16,13 @@ data class Account(
                 strategy = "enhanced-sequence",
                 parameters = [Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "account_id_seq")])
         val id: Long?,
+
         val createdDate: ZonedDateTime,
-        val chatId: String,
-        @OneToOne @JoinColumn(name = "user_id") val user: User
+
+        val login: String,
+
+        val accessToken: String,
+
+        @OneToOne
+        val user: User
 )

@@ -5,13 +5,14 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
-import ru.proshik.english.quizlet.telegramBot.repository.model.Account
+import ru.proshik.english.quizlet.telegramBot.repository.model.Accounts
 import java.time.ZonedDateTime
 
 @Service
 class AuthenticationService(private val stateService: QuizletStateService,
                             private val quizletClient: QuizletClient,
-                            private val usersRepository: UsersRepository) {
+                            private val usersRepository: UsersRepository,
+                            private val telegramService: TelegramService) {
 
     companion object {
         const val QUIZLET_BASE_URL = "https://quizlet.com/authorize"
@@ -35,22 +36,19 @@ class AuthenticationService(private val stateService: QuizletStateService,
         val stateValue = stateService.get(state)
                 ?: throw RuntimeException("state value doesn't find by state key=$state")
 
-        val user = usersRepository.findById(state.toLong()).orElseThrow { RuntimeException("user doesn't find") }
+        val user = usersRepository.findByChatId(stateValue).orElseThrow { RuntimeException("user doesn't find") }
 
         // sent request to quizlet
         val authorization = quizletClient.accessToken(code)
         // save access_token to DB
 
-        user.account =
-                Account(
-                        createdDate = ZonedDateTime.now(),
-                        accessToken = authorization.accessToken,
-                        login = authorization.userId,
-                        user = user
-                )
+        val account = Accounts(ZonedDateTime.now(), authorization.userId, authorization.accessToken)
+        account.setUser(user)
+        user.account = account
         usersRepository.save(user)
 
         // get userId(chatId) to notify in the telegram by chatId
+        telegramService.sendAuthConfirmMess(user.chatId)
     }
 
     fun generateAuthUrl(): String {

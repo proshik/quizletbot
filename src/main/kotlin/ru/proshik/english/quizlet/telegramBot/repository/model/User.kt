@@ -7,8 +7,8 @@ import java.time.ZonedDateTime
 import javax.persistence.*
 import javax.persistence.GenerationType.SEQUENCE
 
-@Entity
-@Table(name = "users")
+//@Entity
+//@Table(name = "users")
 data class User(
         @Id
         @GeneratedValue(strategy = SEQUENCE, generator = "users_id_seq")
@@ -16,10 +16,14 @@ data class User(
                 strategy = "enhanced-sequence",
                 parameters = [Parameter(name = SEQUENCE_PARAM, value = "users_id_seq")])
         val id: Long?,
+
         val createdDate: ZonedDateTime,
+
         val chatId: String,
-        @MapsId
-        @OneToOne(mappedBy = "user", optional = false, cascade = [CascadeType.ALL]) val account: Account?
+
+        @OneToOne
+        @JoinColumn(name = "account_id")
+        var account: Account? = null
 )
 
 
