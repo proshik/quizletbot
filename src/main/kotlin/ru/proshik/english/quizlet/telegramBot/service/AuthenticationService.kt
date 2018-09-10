@@ -18,16 +18,16 @@ class AuthenticationService(private val stateService: QuizletStateService,
     }
 
     @Value("\${quizlet.client-id}")
-    val clientId: String? = null
+    private val clientId: String? = null
 
     @Value("\${quizlet.response-type}")
-    val responseType: String? = null
+    private val responseType: String? = null
 
     @Value("\${quizlet.scope}")
-    val scope: String? = null
+    private val scope: String? = null
 
     @Value("\${quizlet.redirect-url}")
-    val redirectUrl: String? = null
+    private val redirectUrl: String? = null
 
     @Transactional
     fun authenticate(state: String, code: String) {

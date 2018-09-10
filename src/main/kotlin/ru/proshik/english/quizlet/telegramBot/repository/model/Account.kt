@@ -11,19 +11,12 @@ import javax.persistence.*
 @Table(name = "account")
 data class Account(
         @Id
-        @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "users_id_seq")
-        @GenericGenerator(name = "users_id_seq",
+        @GeneratedValue(strategy = GenerationType.SEQUENCE, generator = "account_id_seq")
+        @GenericGenerator(name = "account_id_seq",
                 strategy = "enhanced-sequence",
-                parameters = [Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "users_id_seq")])
-        val id: Long? = null,
-
+                parameters = [Parameter(name = SequenceStyleGenerator.SEQUENCE_PARAM, value = "account_id_seq")])
+        val id: Long?,
         val createdDate: ZonedDateTime,
-
-        val login: String,
-
-        @Column(name = "access_token")
-        val accessToken: String,
-
-        @OneToOne @MapsId
-        var user: User?
+        val chatId: String,
+        @OneToOne @JoinColumn(name = "user_id") val user: User
 )
