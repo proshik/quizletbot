@@ -11,7 +11,7 @@ import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
 @Entity
 @Table(name = "users")
-public class Users {
+public class User {
 
     @Id
     @GeneratedValue(strategy = SEQUENCE, generator = "users_id_seq")
@@ -25,17 +25,17 @@ public class Users {
     private String chatId;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private Accounts account;
+    private Account account;
 
-    public Users() {
+    public User() {
     }
 
-    public Users(ZonedDateTime createdDate, String chatId) {
+    public User(ZonedDateTime createdDate, String chatId) {
         this.createdDate = createdDate;
         this.chatId = chatId;
     }
 
-    public Users(ZonedDateTime createdDate, String chatId, Accounts account) {
+    public User(ZonedDateTime createdDate, String chatId, Account account) {
         this.createdDate = createdDate;
         this.chatId = chatId;
         this.account = account;
@@ -53,14 +53,11 @@ public class Users {
         return chatId;
     }
 
-    public Accounts getAccount() {
+    public Account getAccount() {
         return account;
     }
 
-    public void setAccount(Accounts account) {
-        this.account = account;
-    }
-    public void setAccounts(Accounts account) {
+    public void setAccount(Account account) {
         if (account == null) {
             if (this.account != null) {
                 this.account.setUser(null);

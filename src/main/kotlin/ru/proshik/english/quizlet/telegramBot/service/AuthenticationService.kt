@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
-import ru.proshik.english.quizlet.telegramBot.repository.model.Accounts
+import ru.proshik.english.quizlet.telegramBot.repository.model.Account
 import java.time.ZonedDateTime
 
 @Service
@@ -33,27 +33,28 @@ class AuthenticationService(private val stateService: QuizletStateService,
     @Transactional
     fun authenticate(state: String, code: String) {
         // check state
-        val stateValue = stateService.get(state)
-                ?: throw RuntimeException("state value doesn't find by state key=$state")
-
-        val user = usersRepository.findByChatId(stateValue).orElseThrow { RuntimeException("user doesn't find") }
+        val chatId = stateService.get(state) ?: throw RuntimeException("state value doesn't find by state key=$state")
 
         // sent request to quizlet
         val authorization = quizletClient.accessToken(code)
-        // save access_token to DB
 
-        val account = Accounts(ZonedDateTime.now(), authorization.userId, authorization.accessToken)
-        account.setUser(user)
+        // save access_token to DB
+        val user = usersRepository.findByChatId(chatId).orElseThrow { RuntimeException("user doesn't find") }
+        // TODO try inside telegram bot. It were write because generated an exception on duplicate login in the account table
+//        if (user.account != null) {
+//            throw RuntimeException("quizlet account for user with chatId=$chatId already exists")
+//        }
+
+        // create and save account for user
+        val account = Account(ZonedDateTime.now(), authorization.userId, authorization.accessToken)
         user.account = account
         usersRepository.save(user)
 
+        // delete state from im-memory map with states
+        stateService.delete(state)
+
         // get userId(chatId) to notify in the telegram by chatId
         telegramService.sendAuthConfirmMess(user.chatId)
-    }
-
-    fun generateAuthUrl(): String {
-        val state = stateService.add()
-        return buildAuthUrl(state)
     }
 
     fun generateAuthUrl(chatId: String): String {

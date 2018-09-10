@@ -4,7 +4,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.model.UserResp
 import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
-import ru.proshik.english.quizlet.telegramBot.repository.model.Users
+import ru.proshik.english.quizlet.telegramBot.repository.model.User
 import java.time.ZonedDateTime
 
 @Service
@@ -16,7 +16,7 @@ class UsersService(private val usersRepository: UsersRepository,
 
         val authUrl = authenticationService.generateAuthUrl(chatId)
 
-        val user = Users(ZonedDateTime.now(), chatId)
+        val user = User(ZonedDateTime.now(), chatId)
 
         usersRepository.save(user)
 

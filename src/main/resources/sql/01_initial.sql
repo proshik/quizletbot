@@ -16,9 +16,9 @@ create table if not exists account
 (
   id           serial primary key,
   created_date timestamp default now(),
-  login        text UNIQUE NOT NULL,
+  login        text UNIQUE    NOT NULL,
   access_token text,
-  user_id      bigint      not null
+  user_id      bigint unique  not null
     constraint account_user_id_fk
     references users
 );

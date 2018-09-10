@@ -9,13 +9,6 @@ class QuizletStateService {
 
     private var store: ConcurrentHashMap<String, String> = ConcurrentHashMap()
 
-    fun add(): String {
-        val state = generateState()
-        store[state] = ""
-
-        return state
-    }
-
     fun add(chatId: String): String {
         val state = generateState()
         store[state] = chatId
