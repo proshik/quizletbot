@@ -12,7 +12,7 @@ import java.time.ZonedDateTime
 class AuthenticationService(private val stateService: QuizletStateService,
                             private val quizletClient: QuizletClient,
                             private val usersRepository: UsersRepository,
-                            private val telegramService: TelegramService) {
+                            private val telegramBotService: TelegramBotService) {
 
     companion object {
         const val QUIZLET_BASE_URL = "https://quizlet.com/authorize"
@@ -54,7 +54,7 @@ class AuthenticationService(private val stateService: QuizletStateService,
         stateService.delete(state)
 
         // get userId(chatId) to notify in the telegram by chatId
-        telegramService.sendAuthConfirmationMessage(user.chatId)
+        telegramBotService.sendAuthConfirmationMessage(user.chatId)
     }
 
     fun generateAuthUrl(chatId: String): String {

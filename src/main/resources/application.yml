@@ -31,14 +31,14 @@ info:
     name: ${spring.application.name}
     version: ${parent.version}
 
-#logging:
-#  level:
-#    org.springframework: debug
-
 quizlet:
-    client-id: ${QUIZLET_CLIENT_ID}
-    response-type: code
-    scope: read
-    redirect-url: ${QUIZLET_REDIRECT_URL:localhost:8080/redirect}
-    auth:
-      secret: ${QUIZLET_AUTH_HEADER_SECRET}
+  client-id: ${QUIZLET_CLIENT_ID}
+  response-type: code
+  scope: read
+  redirect-url: ${QUIZLET_REDIRECT_URL:localhost:8080/redirect}
+  auth:
+    secret: ${QUIZLET_AUTH_HEADER_SECRET}
+
+telegram:
+  username: ${TELEGRAM_USERNAME}
+  token: ${TELEGRAM_TOKEN}

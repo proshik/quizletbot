@@ -22,6 +22,7 @@ public class User {
 
     private ZonedDateTime createdDate;
 
+    @Column(name = "chat_id", nullable = false)
     private String chatId;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
@@ -62,8 +63,7 @@ public class User {
             if (this.account != null) {
                 this.account.setUser(null);
             }
-        }
-        else {
+        } else {
             account.setUser(this);
         }
         this.account = account;
