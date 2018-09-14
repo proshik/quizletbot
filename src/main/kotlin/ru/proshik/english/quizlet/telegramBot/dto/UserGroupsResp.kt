@@ -1,12 +1,8 @@
-package ru.proshik.english.quizlet.telegramBot.model
+package ru.proshik.english.quizlet.telegramBot.dto
 
-import com.fasterxml.jackson.annotation.JsonIgnoreProperties
-import com.fasterxml.jackson.annotation.JsonInclude
 import com.fasterxml.jackson.annotation.JsonProperty
 
-@JsonIgnoreProperties(ignoreUnknown = true)
-@JsonInclude(JsonInclude.Include.NON_NULL)
-data class UserGroupsResp(val id: Int,
+data class UserGroupsResp(val id: Long,
                           val url: String,
                           val name: String,
                           @JsonProperty("created_date") val createdDate: Long,

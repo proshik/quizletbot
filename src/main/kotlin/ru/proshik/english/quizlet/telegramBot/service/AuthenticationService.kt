@@ -5,7 +5,7 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
-import ru.proshik.english.quizlet.telegramBot.repository.model.Account
+import ru.proshik.english.quizlet.telegramBot.model.Account
 import java.time.ZonedDateTime
 
 @Service

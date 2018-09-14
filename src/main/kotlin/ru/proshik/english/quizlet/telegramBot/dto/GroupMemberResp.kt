@@ -1,4 +1,4 @@
-package ru.proshik.english.quizlet.telegramBot.model
+package ru.proshik.english.quizlet.telegramBot.dto
 
 import com.fasterxml.jackson.annotation.JsonProperty
 

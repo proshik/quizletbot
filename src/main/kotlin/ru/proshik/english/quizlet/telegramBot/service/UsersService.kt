@@ -2,9 +2,9 @@ package ru.proshik.english.quizlet.telegramBot.service
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import ru.proshik.english.quizlet.telegramBot.model.UserResp
+import ru.proshik.english.quizlet.telegramBot.dto.UserResp
 import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
-import ru.proshik.english.quizlet.telegramBot.repository.model.User
+import ru.proshik.english.quizlet.telegramBot.model.User
 import java.time.ZonedDateTime
 
 @Service

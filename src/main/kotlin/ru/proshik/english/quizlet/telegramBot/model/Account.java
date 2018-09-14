@@ -1,4 +1,4 @@
-package ru.proshik.english.quizlet.telegramBot.repository.model;
+package ru.proshik.english.quizlet.telegramBot.model;
 
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;

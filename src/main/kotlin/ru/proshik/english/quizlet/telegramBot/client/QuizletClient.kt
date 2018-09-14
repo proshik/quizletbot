@@ -1,16 +1,24 @@
 package ru.proshik.english.quizlet.telegramBot.client
 
 import com.github.kittinunf.fuel.Fuel
+import com.github.kittinunf.fuel.core.FuelManager
 import com.github.kittinunf.fuel.jackson.jacksonDeserializerOf
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
-import ru.proshik.english.quizlet.telegramBot.model.AuthorizationResp
-import ru.proshik.english.quizlet.telegramBot.model.UserGroupsResp
-import ru.proshik.english.quizlet.telegramBot.model.UserStudiedResp
+import ru.proshik.english.quizlet.telegramBot.dto.AuthorizationResp
+import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
+import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
 
 @Component
 class QuizletClient(@Value("\${quizlet.auth.secret}") private val secret: String,
                     @Value("\${quizlet.redirect-url}") private val redirectUrl: String) {
+    init {
+        FuelManager.instance.apply {
+            timeoutInMillisecond = 3000
+            timeoutReadInMillisecond = 1000
+
+        }
+    }
 
     companion object {
         const val API_QUIZLET_OAUTH_HEADER_TYPE = "Basic"
