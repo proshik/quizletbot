@@ -10,7 +10,7 @@ import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 @Component
 class TelegramBot(private val telegramBotService: TelegramBotService,
                   @Value("\${telegram.token}") private val token: String,
-                  @Value("\${telegram.login}") private val username: String) : TelegramLongPollingBot() {
+                  @Value("\${telegram.username}") private val username: String) : TelegramLongPollingBot() {
 
     companion object {
         private val LOG = Logger.getLogger(TelegramBot::class.java)

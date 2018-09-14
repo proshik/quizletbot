@@ -4,8 +4,8 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
-import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
 import ru.proshik.english.quizlet.telegramBot.model.Account
+import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
 import java.time.ZonedDateTime
 
 @Service
@@ -39,7 +39,9 @@ class AuthenticationService(private val stateService: QuizletStateService,
         val authorization = quizletClient.accessToken(code)
 
         // save access_token to DB
-        val user = usersRepository.findByChatId(chatId).orElseThrow { RuntimeException("user doesn't find") }
+        // TODO fix orElseThrow
+        val user = usersRepository.findByChatId(chatId) ?: throw RuntimeException("user doesn't find")
+        //                .orElseThrow { RuntimeException("user doesn't find") }
         // TODO try inside telegram bot. It were write because generated an exception on duplicate login in the account table
 //        if (user.account != null) {
 //            throw RuntimeException("quizlet account for user with chatId=$chatId already exists")
