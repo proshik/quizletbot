@@ -2,9 +2,8 @@ package ru.proshik.english.quizlet.telegramBot.service
 
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
-import ru.proshik.english.quizlet.telegramBot.dto.UserResp
-import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
 import ru.proshik.english.quizlet.telegramBot.model.User
+import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
 import java.time.ZonedDateTime
 
 @Service
@@ -21,10 +20,10 @@ class UsersService(private val usersRepository: UsersRepository,
         return authUrl
     }
 
-    fun getInfo(userId: Long): UserResp {
-        return usersRepository.findById(userId)
-                .map { mapper -> UserResp(mapper.id, mapper.chatId) }
-                .orElse(null)
+    fun userIsExist(chatId: String): Boolean {
+        val findByChatId = usersRepository.findByChatId(chatId)
+
+        return findByChatId != null
     }
 
 }

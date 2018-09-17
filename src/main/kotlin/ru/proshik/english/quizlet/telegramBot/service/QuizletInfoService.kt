@@ -16,13 +16,13 @@ class QuizletInfoService(private val accountRepository: AccountRepository,
                          private val quizletClient: QuizletClient) {
 
 
-    fun userGroups(chatId: String): List<UserGroupsResp> {
+    fun userGroups(chatId: Long): List<UserGroupsResp> {
         val account = getAccount(chatId)
 
         return quizletClient.userGroups(account.login, account.accessToken)
     }
 
-    fun buildStatistic(chatId: String,
+    fun buildStatistic(chatId: Long,
                        groupId: Long,
                        setIds: List<Long>,
                        userGroups: List<UserGroupsResp>): Statistics {
@@ -30,15 +30,15 @@ class QuizletInfoService(private val accountRepository: AccountRepository,
 
         val userStudied = quizletClient.userStudied(account.login, account.accessToken)
 
-        val group = userGroups.asSequence()
+        val pair = userGroups.asSequence()
                 .filter { userGroup -> groupId == userGroup.id }
                 .map { userGroup -> Pair(userGroup, userGroup.sets.filter { set -> setIds.contains(set.id) }) }
+                .toList()
                 .first()
-                .first
 
-        val setStats = buildStatistic(userStudied, group.sets)
+        val setStats = buildStatistic(userStudied, pair.second)
 
-        return Statistics(group.id, group.name, setStats)
+        return Statistics(pair.first.id, pair.first.name, setStats)
     }
 
     private fun buildStatistic(studied: List<UserStudiedResp>, sets: List<SetResp>): List<SetStat> {
@@ -56,8 +56,8 @@ class QuizletInfoService(private val accountRepository: AccountRepository,
         }
     }
 
-    private fun getAccount(chatId: String): Account {
-        return accountRepository.findAccessTokenByUserChatId(chatId)
+    private fun getAccount(chatId: Long): Account {
+        return accountRepository.findAccessTokenByUserChatId(chatId.toString())
     }
 
 }

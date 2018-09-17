@@ -1,6 +1,7 @@
 package ru.proshik.english.quizlet.telegramBot.service
 
 import org.springframework.beans.factory.annotation.Value
+import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
@@ -12,7 +13,7 @@ import java.time.ZonedDateTime
 class AuthenticationService(private val stateService: QuizletStateService,
                             private val quizletClient: QuizletClient,
                             private val usersRepository: UsersRepository,
-                            private val telegramBotService: TelegramBotService) {
+                            @Lazy private val telegramBotService: TelegramBotService) {
 
     companion object {
         const val QUIZLET_BASE_URL = "https://quizlet.com/authorize"
@@ -56,7 +57,7 @@ class AuthenticationService(private val stateService: QuizletStateService,
         stateService.delete(state)
 
         // get userId(chatId) to notify in the telegram by chatId
-        telegramBotService.sendAuthConfirmationMessage(user.chatId)
+        telegramBotService.sendAuthConfirmationMessage(user.chatId, user.account.login)
     }
 
     fun generateAuthUrl(chatId: String): String {

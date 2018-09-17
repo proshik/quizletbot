@@ -1,5 +1,6 @@
 package ru.proshik.english.quizlet.telegramBot.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.log4j.Logger
 import org.springframework.context.annotation.Lazy
 import org.springframework.stereotype.Service
@@ -13,17 +14,33 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKe
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.meta.updateshandlers.SentCallback
+import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
+import ru.proshik.english.quizlet.telegramBot.service.command.StatisticCommand
 import java.io.Serializable
 import java.util.*
+import java.util.concurrent.ConcurrentHashMap
 
 
 @Service
-class TelegramBotService(@Lazy private val bot: TelegramBot) {
+class TelegramBotService(@Lazy private val bot: TelegramBot,
+                         private val quizletInfoService: QuizletInfoService,
+                         private val authenticationService: AuthenticationService,
+                         private val usersService: UsersService) {
 
     companion object {
 
         private val LOG = Logger.getLogger(TelegramBotService::class.java)
+
+        private const val DEFAULT_MESSAGE = "This bot can help you get information about studied sets on quizlet.com"
+
+        private const val STATISTIC_COMMAND = "Statistics"
+        private const val NOTIFICATIONS_COMMAND = "Notifications"
+        private const val ACCOUNT_COMMAND = "Account"
+
+        private val COMMANDS = listOf(STATISTIC_COMMAND, NOTIFICATIONS_COMMAND, ACCOUNT_COMMAND)
     }
+
+    val commandQueue = ConcurrentHashMap<Long, StatisticCommand>()
 
     fun onWebHookUpdateReceived(update: Update): BotApiMethod<Message> = when {
         update.hasMessage() -> message(update)
@@ -43,8 +60,9 @@ class TelegramBotService(@Lazy private val bot: TelegramBot) {
 
     private fun commandMessage(update: Update): BotApiMethod<Message> {
         return when (update.message.text.split(" ")[0]) {
-            "/start" -> SendMessage().setChatId(update.message?.chatId).setText("This bot can help you get information about studied sets on quizlet.com")
-//            "/help" -> SendMessage().setChatId(update.message?.chatId).setText("Help message")
+            "/start" -> SendMessage().setChatId(update.message?.chatId).setText(DEFAULT_MESSAGE)
+            "/help" -> SendMessage().setChatId(update.message?.chatId).setText(DEFAULT_MESSAGE)
+            "/connect" -> SendMessage().setChatId(update.message?.chatId).setText(authenticationService.generateAuthUrl(update.message?.chatId.toString()))
             "/inlinekeyboard" -> keyboard(update)
             "/replaykeyboard" -> sendCustomKeyboard(update)
             else -> throw RuntimeException("Unexpected command")
@@ -52,17 +70,117 @@ class TelegramBotService(@Lazy private val bot: TelegramBot) {
     }
 
     private fun isOperationMessage(update: Update): Boolean {
-        return false
+        return COMMANDS.contains(update.message.text) || commandQueue[update.message.chatId] != null
     }
 
     private fun operationMessage(update: Update): BotApiMethod<Message> {
-        return SendMessage().setChatId(update.message?.chatId).setText("Command message")
+        val chatId = update.message.chatId
+
+        val command = commandQueue[chatId]
+
+        try {
+            if (command != null) {
+                val message = SendMessage().setChatId(chatId)
+                if (command.groupId == null) {
+                    val group = command.meta.asSequence().filter { group -> group.name == update.message.text }.first()
+                    val keyboardMarkup = ReplyKeyboardMarkup()
+                    val rows = ArrayList<KeyboardRow>()
+                    for (set in group.sets) {
+                        val row = KeyboardRow()
+                        row.add(set.title)
+                        rows.add(row)
+                    }
+                    // Set the keyboard to the markup
+                    keyboardMarkup.keyboard = rows
+                    // Add it to the message
+                    message.replyMarkup = keyboardMarkup
+
+                    command.groupId = group.id
+                    commandQueue.put(chatId, command)
+                } else if (command.setIds == null) {
+                    val set = command.meta.asSequence()
+                            .filter { group -> group.id == command.groupId }
+                            .flatMap { group -> group.sets.asSequence() }
+                            .filter { set -> set.title == update.message.text }
+                            .first()
+
+                    val statistic = quizletInfoService.buildStatistic(chatId, command.groupId, listOf(set.id), command.meta)
+                    val mapper = ObjectMapper()
+                    message.text = mapper.writerWithDefaultPrettyPrinter().writeValueAsString(statistic)
+
+                    commandQueue.remove(chatId)
+                } else {
+
+                    commandQueue.remove(chatId)
+                    throw RuntimeException("weird behavior")
+                }
+
+                return message
+            } else {
+                return when (update.message.text) {
+                    STATISTIC_COMMAND -> buildStartMessageCommand(chatId, quizletInfoService.userGroups(chatId))
+                    else -> defaultMessage(update)
+                }
+            }
+        } catch (e: Exception) {
+            commandQueue.remove(chatId)
+            LOG.error("unexpected error", e)
+        }
+
+        return SendMessage().setChatId(chatId).setText("Internal error. Please repeat a request")
+    }
+
+    private fun buildStartMessageCommand(chatId: Long, userGroups: List<UserGroupsResp>): BotApiMethod<Message> {
+        if (userGroups.isEmpty()) {
+            return SendMessage()
+                    .setChatId(chatId)
+                    .setText("Doesn't find one class group in the account")
+        }
+
+        val message = SendMessage().setChatId(chatId)
+        message.text = "select set for statistic"
+        val keyboardMarkup = ReplyKeyboardMarkup()
+        val rows = ArrayList<KeyboardRow>()
+
+        val statCommand = StatisticCommand(chatId, userGroups)
+        if (userGroups.size == 1) {
+            for (set in userGroups[0].sets) {
+                val row = KeyboardRow()
+                row.add(set.title)
+                rows.add(row)
+            }
+            // Set the keyboard to the markup
+            keyboardMarkup.keyboard = rows
+            // Add it to the message
+            message.replyMarkup = keyboardMarkup
+
+            statCommand.groupId = userGroups[0].id
+        } else {
+            for (group in userGroups) {
+                val row = KeyboardRow()
+                row.add(group.name)
+                rows.add(row)
+            }
+            // Set the keyboard to the markup
+            keyboardMarkup.keyboard = rows
+            // Add it to the message
+            message.replyMarkup = keyboardMarkup
+        }
+
+        commandQueue[chatId] = statCommand
+
+        return message
     }
 
     private fun defaultMessage(update: Update): BotApiMethod<Message> {
-        return SendMessage()
-                .setChatId(update.message?.chatId)
-                .setText("To send text messages, please use the keyboard provided.")
+        return if (usersService.userIsExist(update.message.chatId.toString())) {
+            sendCustomKeyboard(update)
+        } else {
+            usersService.create(update.message.chatId.toString())
+            SendMessage()
+                    .setChatId(update.message?.chatId)
+                    .setText("Need to connect quizlet.com account. Please use /connect command")
+        }
     }
 
     private fun keyboard(update: Update): BotApiMethod<Message> {
@@ -90,7 +208,7 @@ class TelegramBotService(@Lazy private val bot: TelegramBot) {
     fun sendCustomKeyboard(update: Update): BotApiMethod<Message> {
         val message = SendMessage()
         message.chatId = update.message.chatId.toString()
-        message.text = "Select"
+        message.text = "To send text messages, please use the keyboard provided or the commands /start and /help."
 
         // Create ReplyKeyboardMarkup object
         val keyboardMarkup = ReplyKeyboardMarkup()
@@ -138,8 +256,10 @@ class TelegramBotService(@Lazy private val bot: TelegramBot) {
 
     }
 
-    fun sendAuthConfirmationMessage(chatId: String) {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    fun sendAuthConfirmationMessage(chatId: String, login: String) {
+        sendMessage(SendMessage()
+                .setChatId(chatId)
+                .setText("Account quizlet.com for user $login added"))
     }
 
 }

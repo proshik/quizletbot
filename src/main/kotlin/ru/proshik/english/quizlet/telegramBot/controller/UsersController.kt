@@ -13,9 +13,4 @@ class UsersController(private val usersService: UsersService) {
         return usersService.create(chatId)
     }
 
-    @GetMapping
-    fun getInfo(@RequestParam("userId") userId: Long): UserResp {
-        return usersService.getInfo(userId = userId)
-    }
-
 }
