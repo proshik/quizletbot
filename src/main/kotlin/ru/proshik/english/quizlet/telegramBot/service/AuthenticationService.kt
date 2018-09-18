@@ -13,6 +13,7 @@ import java.time.ZonedDateTime
 class AuthenticationService(private val stateService: QuizletStateService,
                             private val quizletClient: QuizletClient,
                             private val usersRepository: UsersRepository,
+                            // TODO change an architecture of classes and remove @Lazy
                             @Lazy private val telegramBotService: TelegramBotService) {
 
     companion object {
