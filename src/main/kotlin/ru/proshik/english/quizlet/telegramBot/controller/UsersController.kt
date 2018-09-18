@@ -1,7 +1,9 @@
 package ru.proshik.english.quizlet.telegramBot.controller
 
-import org.springframework.web.bind.annotation.*
-import ru.proshik.english.quizlet.telegramBot.dto.UserResp
+import org.springframework.web.bind.annotation.PostMapping
+import org.springframework.web.bind.annotation.RequestMapping
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RestController
 import ru.proshik.english.quizlet.telegramBot.service.UsersService
 
 @RestController
@@ -9,8 +11,8 @@ import ru.proshik.english.quizlet.telegramBot.service.UsersService
 class UsersController(private val usersService: UsersService) {
 
     @PostMapping
-    fun registration(@RequestParam("chatId") chatId: String): String {
-        return usersService.create(chatId)
+    fun registration(@RequestParam("chatId") chatId: String) {
+        usersService.create(chatId)
     }
 
 }

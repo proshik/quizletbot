@@ -4,8 +4,7 @@ public interface Operation<T extends OperationResult, R extends OperationResultF
 
     T init();
 
-    OperationResult<?, ?> nextStep(String text, String data);
+    OperationResult<?, ?> nextStep(String text);
 
-    // TODO rename builder on formatter
     R getFormatter();
 }

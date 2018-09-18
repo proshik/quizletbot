@@ -42,3 +42,4 @@ quizlet:
 telegram:
   username: ${TELEGRAM_USERNAME}
   token: ${TELEGRAM_TOKEN}
+  max_threads: ${TELEGRAM_MAX_THREAD:1}
