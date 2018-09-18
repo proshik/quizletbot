@@ -42,10 +42,8 @@ class QuizletInfoService(private val accountRepository: AccountRepository,
     }
 
     private fun buildStatistic(studied: List<UserStudiedResp>, sets: List<SetResp>): List<SetStat> {
-
         val studiedSetsBySetId = studied.groupBy { userStudiedResp: UserStudiedResp -> userStudiedResp.set.id }
 
-        // TODO put a breakpoint inside the map function
         return sets.map { set ->
             val modeStats = studiedSetsBySetId[set.id]
                     ?.filter { us -> us.finishDate != null }

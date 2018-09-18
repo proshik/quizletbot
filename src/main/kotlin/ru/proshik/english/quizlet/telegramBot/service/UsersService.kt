@@ -7,23 +7,17 @@ import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
 import java.time.ZonedDateTime
 
 @Service
-class UsersService(private val usersRepository: UsersRepository,
-                   private val authenticationService: AuthenticationService) {
+class UsersService(private val usersRepository: UsersRepository) {
 
     @Transactional
-    fun create(chatId: String): String {
-        val authUrl = authenticationService.generateAuthUrl(chatId)
-
+    fun create(chatId: String) {
         val user = User(ZonedDateTime.now(), chatId)
-        usersRepository.save(user)
 
-        return authUrl
+        usersRepository.save(user)
     }
 
-    fun userIsExist(chatId: String): Boolean {
-        val findByChatId = usersRepository.findByChatId(chatId)
-
-        return findByChatId != null
+    fun getUser(chatId: String): User? {
+        return usersRepository.findByChatId(chatId)
     }
 
 }
