@@ -22,6 +22,15 @@ enum class ModeType(val title: String,
                     .filter(modeTypes::contains)
                     .flatMap(ModeType::designations)
         }
-    }
 
+        fun modeTypeByDesignation(designation: String): ModeType {
+            return modeTypeByDesignation().asSequence().filter { entry -> entry.key == designation }.first().value
+        }
+
+        fun modeTypeByDesignation(): Map<String, ModeType> {
+            return values().flatMap { modeType -> modeType.designations.map { s -> Pair(s, modeType) } }
+                    .toMap()
+        }
+
+    }
 }
