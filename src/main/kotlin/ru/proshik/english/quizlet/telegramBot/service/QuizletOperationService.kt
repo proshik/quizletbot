@@ -6,11 +6,10 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Message
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
-import ru.proshik.english.quizlet.telegramBot.dto.SetResp
 import ru.proshik.english.quizlet.telegramBot.service.command.StatisticCommand
+import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
 import ru.proshik.english.quizlet.telegramBot.service.model.Statistics
 import java.util.concurrent.ConcurrentHashMap
-import java.util.stream.Collectors
 
 @Service
 class QuizletOperationService(private val usersService: UsersService,
@@ -48,7 +47,13 @@ class QuizletOperationService(private val usersService: UsersService,
                 StatisticCommand.Step.SELECT_GROUP -> {
                     val userGroups = quizletInfoService.userGroups(chatId)
 
-                    val group = userGroups.first { group -> group.name == text }
+                    val group = userGroups.asSequence().filter { group -> group.name == text }.firstOrNull()
+                    if (group == null) {
+                        commandQueue.remove(chatId)
+                        return SendMessage().setChatId(chatId).setText("Doesn't find group for $text")
+                                .setReplyMarkup(sendCustomKeyboard(chatId))
+                    }
+
                     for (set in group.sets.sortedByDescending { set -> set.publishedDate }) {
                         items.add(set.title)
                     }
@@ -163,10 +168,37 @@ class QuizletOperationService(private val usersService: UsersService,
     }
 
     fun formatResult(chatId: Long, statistics: Statistics): BotApiMethod<Message> {
+        val res = StringBuilder("Group: *${statistics.groupName}*\n\n")
+
+        for (set in statistics.setsStats.sortedByDescending { set -> set.publishedDate }) {
+            res.append("Set: *${set.title}*\n")
+
+            val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
+
+            for (mode in ModeType.values()) {
+                if (modeStatByMode.containsKey(mode)) {
+                    val modeStat = modeStatByMode[mode]
+
+                    val valueStat = if (modeStat?.last()?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
+                    res.append("_${mode.title}_ ($valueStat) ")
+
+                    // TODO handle it beautifully
+//                    if (modeStat?.formattedScore != null) res.append(" ${modeStat.formattedScore}")
+
+                    res.append("\n")
+                } else {
+                    res.append("${mode.title} (*-*)\n")
+                }
+            }
+            res.append(set.url)
+            res.append("\n")
+        }
+
         return SendMessage()
+                .enableMarkdown(true)
                 .setChatId(chatId)
                 .setReplyMarkup(sendCustomKeyboard(chatId))
-                .setText("Result for group done")
+                .setText(res.toString())
     }
 
     fun sendCustomKeyboard(chatId: Long): ReplyKeyboardMarkup {

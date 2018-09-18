@@ -8,6 +8,7 @@ import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
 import ru.proshik.english.quizlet.telegramBot.model.Account
 import ru.proshik.english.quizlet.telegramBot.repository.AccountRepository
 import ru.proshik.english.quizlet.telegramBot.service.model.ModeStat
+import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
 import ru.proshik.english.quizlet.telegramBot.service.model.SetStat
 import ru.proshik.english.quizlet.telegramBot.service.model.Statistics
 
@@ -46,12 +47,16 @@ class QuizletInfoService(private val accountRepository: AccountRepository,
 
         return sets.map { set ->
             val modeStats = studiedSetsBySetId[set.id]
-                    ?.filter { us -> us.finishDate != null }
+//                    ?.filter { us -> us.finishDate != null }
                     .orEmpty()
-                    .map { us -> ModeStat(us.mode, us.startDate, us.finishDate, us.formattedScore) }
+                    .map { us -> ModeStat(defineModeType(us.mode), us.startDate, us.finishDate, us.formattedScore) }
 
-            SetStat(set.id, set.title, set.createdDate, set.publishedDate, modeStats)
+            SetStat(set.id, set.title, set.url, set.createdDate, set.publishedDate, modeStats)
         }
+    }
+
+    private fun defineModeType(mode: String): ModeType {
+        return ModeType.modeTypeByDesignation(mode)
     }
 
     private fun getAccount(chatId: Long): Account {

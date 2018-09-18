@@ -6,12 +6,13 @@ data class Statistics(val groupId: Long,
 
 data class SetStat(val id: Long,
                    val title: String,
+                   val url: String,
                    val createdDate: Long,
                    val publishedDate: Long,
                    val modeStats: List<ModeStat>)
 
 
-data class ModeStat(val mode: String,
+data class ModeStat(val mode: ModeType,
                     val startDate: Long,
                     val finishDate: Long?,
                     val formattedScore: String?)
