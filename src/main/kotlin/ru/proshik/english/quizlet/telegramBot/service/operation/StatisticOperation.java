@@ -68,18 +68,18 @@ public class StatisticOperation implements Operation<StaticOperationResult, Oper
     }
 
     @Override
-    public OperationResult<?, ?> nextStep(String text, String data) {
+    public OperationResult<?, ?> nextStep(String text) {
         switch (currentStep) {
             case SELECT_GROUP:
                 // build info for sets
-                break;
+                return null;
             case SELECT_SET:
                 // build final statistic
 
-                userGroups.stream().filter(group -> group.get)
+//                userGroups.stream().filter(group -> group.get)
 
-                staticOperationProvider.getQuizletInfoService().buildStatistic(chatId, text,)
-                break;
+//                staticOperationProvider.getQuizletInfoService().buildStatistic(chatId, text,)
+                return null;
             default:
                 throw new IllegalArgumentException("unexpected current step = " + currentStep);
         }

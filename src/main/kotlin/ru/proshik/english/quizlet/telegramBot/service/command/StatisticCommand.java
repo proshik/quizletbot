@@ -1,18 +1,17 @@
 package ru.proshik.english.quizlet.telegramBot.service.command;
 
-import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp;
+public class StatisticCommand implements Command {
 
-import java.util.List;
-
-public class StatisticCommand implements Command<List<UserGroupsResp>> {
+    public enum Step {
+        SELECT_GROUP,
+        SELECT_SET
+    }
 
     private Long chatId;
 
+    private Step currentStep;
+
     private Long groupId;
-
-    private List<Long> setIds;
-
-    private List<UserGroupsResp> meta;
 
     public StatisticCommand() {
     }
@@ -21,21 +20,6 @@ public class StatisticCommand implements Command<List<UserGroupsResp>> {
         this.chatId = chatId;
     }
 
-    public StatisticCommand(Long chatId, List<UserGroupsResp> meta) {
-        this.chatId = chatId;
-        this.meta = meta;
-    }
-
-    public StatisticCommand(Long chatId, Long groupId, List<Long> setIds) {
-        this.chatId = chatId;
-        this.groupId = groupId;
-        this.setIds = setIds;
-    }
-
-    @Override
-    public List<UserGroupsResp> getMeta() {
-        return meta;
-    }
 
     public Long getChatId() {
         return chatId;
@@ -53,11 +37,11 @@ public class StatisticCommand implements Command<List<UserGroupsResp>> {
         this.groupId = groupId;
     }
 
-    public List<Long> getSetIds() {
-        return setIds;
+    public Step getCurrentStep() {
+        return currentStep;
     }
 
-    public void setSetIds(List<Long> setIds) {
-        this.setIds = setIds;
+    public void setCurrentStep(Step currentStep) {
+        this.currentStep = currentStep;
     }
 }
