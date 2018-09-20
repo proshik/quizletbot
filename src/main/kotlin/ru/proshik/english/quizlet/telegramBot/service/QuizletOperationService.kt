@@ -43,10 +43,22 @@ class QuizletOperationService(private val usersService: UsersService,
     }
 
     fun handleCommand(chatId: Long, text: String): BotApiMethod<Message> {
-        val command = commandQueue[chatId]
-        if (command != null) {
+        val activeUserCommand = commandQueue[chatId]
+        if (activeUserCommand == null) {
+            return when (text) {
+                STATISTIC_COMMAND -> {
+                    // clear the cache of result statistic the previous operation
+                    cacheCommand.remove(chatId)
+
+                    val initCommand = initStaticCommand(chatId);
+                    formatStep(chatId, initCommand.first, initCommand.second)
+                }
+                else -> SendMessage().setChatId(chatId).setText("Select Operation")
+                        .setReplyMarkup(buildDefaultKeyboard())
+            }
+        } else {
             val items: MutableList<String> = ArrayList()
-            when (command.currentStep) {
+            when (activeUserCommand.currentStep) {
                 StatisticCommand.Step.SELECT_GROUP -> {
                     val userGroups = quizletInfoService.userGroups(chatId)
 
@@ -67,17 +79,17 @@ class QuizletOperationService(private val usersService: UsersService,
                                 .setReplyMarkup(buildDefaultKeyboard())
                     }
 
-                    command.groupId = group.id
-                    command.currentStep = StatisticCommand.Step.SELECT_SET
+                    activeUserCommand.groupId = group.id
+                    activeUserCommand.currentStep = StatisticCommand.Step.SELECT_SET
 
-                    commandQueue[chatId] = command
+                    commandQueue[chatId] = activeUserCommand
 
                     return formatStep(chatId, items, true)
                 }
                 StatisticCommand.Step.SELECT_SET -> {
                     val userGroups = quizletInfoService.userGroups(chatId)
 
-                    val group = userGroups.asSequence().filter { group -> group.id == command.groupId }.first()
+                    val group = userGroups.asSequence().filter { group -> group.id == activeUserCommand.groupId }.first()
 
                     val setIds = if (text == "All") {
                         group.sets.map { set -> set.id }
@@ -101,19 +113,6 @@ class QuizletOperationService(private val usersService: UsersService,
                 }
                 else -> throw RuntimeException("unexpected")
             }
-        } else {
-            return when (text) {
-                STATISTIC_COMMAND -> {
-                    // clear the cache of result statistic the previous operation
-                    cacheCommand.remove(chatId)
-
-                    val initCommand = initStaticCommand(chatId);
-                    formatStep(chatId, initCommand.first, initCommand.second)
-                }
-                else -> SendMessage().setChatId(chatId).setText("Select Operation")
-                        .setReplyMarkup(buildDefaultKeyboard())
-            }
-
         }
     }
 
@@ -216,7 +215,7 @@ class QuizletOperationService(private val usersService: UsersService,
 //                .setReplyMarkup(buildDefaultKeyboard())
                 .setText(res.toString())
 
-        if (statistics.setsStats.size > 1){
+        if (statistics.setsStats.size > 1) {
             message.replyMarkup = buildInlineKeyboardMarkup()
         }
 

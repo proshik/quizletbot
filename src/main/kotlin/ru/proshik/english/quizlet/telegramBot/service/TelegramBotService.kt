@@ -63,7 +63,6 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
         val callData = update.callbackQuery.data
 
         return quizletOperationService.handleCallback(chatId, messageId, callData)
-//        return SendMessage().setChatId(update.callbackQuery.message.chatId).setText("Callback message")
     }
 
     private fun commandMessage(update: Update): BotApiMethod<Message> {
