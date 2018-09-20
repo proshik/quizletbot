@@ -4,7 +4,9 @@ import org.springframework.stereotype.Service
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Message
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import ru.proshik.english.quizlet.telegramBot.service.command.StatisticCommand
 import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
@@ -29,6 +31,7 @@ class QuizletOperationService(private val usersService: UsersService,
 
     val commandQueue = ConcurrentHashMap<Long, StatisticCommand>()
 
+    val cacheCommand = HashMap<Long, Statistics>()
 
     fun connectToQuizlet(chatId: Long): String {
         val user = usersService.getUser(chatId.toString())
@@ -51,7 +54,7 @@ class QuizletOperationService(private val usersService: UsersService,
                     if (group == null) {
                         commandQueue.remove(chatId)
                         return SendMessage().setChatId(chatId).setText("Doesn't find group for $text")
-                                .setReplyMarkup(sendCustomKeyboard(chatId))
+                                .setReplyMarkup(buildDefaultKeyboard())
                     }
 
                     for (set in group.sets.sortedByDescending { set -> set.publishedDate }) {
@@ -61,7 +64,7 @@ class QuizletOperationService(private val usersService: UsersService,
                     if (items.isEmpty()) {
                         commandQueue.remove(chatId)
                         return SendMessage().setChatId(chatId).setText("Doesn't find not one set for ${group.name}")
-                                .setReplyMarkup(sendCustomKeyboard(chatId))
+                                .setReplyMarkup(buildDefaultKeyboard())
                     }
 
                     command.groupId = group.id
@@ -85,10 +88,12 @@ class QuizletOperationService(private val usersService: UsersService,
                     if (setIds.isEmpty()) {
                         commandQueue.remove(chatId)
                         return SendMessage().setChatId(chatId).setText("Incorrect request. The operation will start from the beginning")
-                                .setReplyMarkup(sendCustomKeyboard(chatId))
+                                .setReplyMarkup(buildDefaultKeyboard())
                     }
 
                     val statistics = quizletInfoService.buildStatistic(chatId, group.id, setIds, userGroups)
+
+                    cacheCommand[chatId] = statistics
 
                     commandQueue.remove(chatId)
 
@@ -99,14 +104,23 @@ class QuizletOperationService(private val usersService: UsersService,
         } else {
             return when (text) {
                 STATISTIC_COMMAND -> {
+                    // clear the cache of result statistic the previous operation
+                    cacheCommand.remove(chatId)
+
                     val initCommand = initStaticCommand(chatId);
                     formatStep(chatId, initCommand.first, initCommand.second)
                 }
                 else -> SendMessage().setChatId(chatId).setText("Select Operation")
-                        .setReplyMarkup(sendCustomKeyboard(chatId))
+                        .setReplyMarkup(buildDefaultKeyboard())
             }
 
         }
+    }
+
+    fun handleCallback(chatId: Long, messageId: Long, callData: String): BotApiMethod<Message> {
+        val statistics = cacheCommand[chatId]
+
+        return SendMessage().setChatId(chatId).setText("Callback message")
     }
 
     private fun initStaticCommand(chatId: Long): Pair<List<String>, Boolean> {
@@ -141,10 +155,12 @@ class QuizletOperationService(private val usersService: UsersService,
         return Pair(items, setStep)
     }
 
-    fun formatStep(chatId: Long, items: List<String>, all: Boolean = false): BotApiMethod<Message> {
+    private fun formatStep(chatId: Long, items: List<String>, all: Boolean = false): BotApiMethod<Message> {
         val message = SendMessage().setChatId(chatId)
 
         val keyboardMarkup = ReplyKeyboardMarkup()
+        keyboardMarkup.oneTimeKeyboard = true
+
         val rows = ArrayList<KeyboardRow>()
 
         if (all) {
@@ -167,7 +183,7 @@ class QuizletOperationService(private val usersService: UsersService,
         return message
     }
 
-    fun formatResult(chatId: Long, statistics: Statistics): BotApiMethod<Message> {
+    private fun formatResult(chatId: Long, statistics: Statistics): BotApiMethod<Message> {
         val res = StringBuilder("Group: *${statistics.groupName}*\n\n")
 
         for (set in statistics.setsStats.sortedByDescending { set -> set.publishedDate }) {
@@ -194,17 +210,39 @@ class QuizletOperationService(private val usersService: UsersService,
             res.append("\n")
         }
 
-        return SendMessage()
+        val message = SendMessage()
                 .enableMarkdown(true)
                 .setChatId(chatId)
-                .setReplyMarkup(sendCustomKeyboard(chatId))
+//                .setReplyMarkup(buildDefaultKeyboard())
                 .setText(res.toString())
+
+        if (statistics.setsStats.size > 1){
+            message.replyMarkup = buildInlineKeyboardMarkup()
+        }
+
+        return message
     }
 
-    fun sendCustomKeyboard(chatId: Long): ReplyKeyboardMarkup {
+    private fun buildInlineKeyboardMarkup(): InlineKeyboardMarkup {
+        val markupInline = InlineKeyboardMarkup()
+        val rowsInline = ArrayList<List<InlineKeyboardButton>>()
+
+        val rowInline = ArrayList<InlineKeyboardButton>()
+        rowInline.add(InlineKeyboardButton().setText("previous").setCallbackData("previous"))
+        rowInline.add(InlineKeyboardButton().setText("next").setCallbackData("next"))
+
+        // Set the keyboard to the markup
+        rowsInline.add(rowInline)
+
+        // Add it to the message
+        markupInline.keyboard = rowsInline
+        return markupInline
+    }
+
+    private fun buildDefaultKeyboard(): ReplyKeyboardMarkup {
         val keyboardMarkup = ReplyKeyboardMarkup()
 
-        val rows = java.util.ArrayList<KeyboardRow>()
+        val rows = ArrayList<KeyboardRow>()
 
         val statistics = KeyboardRow()
         statistics.add("Statistics")
@@ -224,7 +262,7 @@ class QuizletOperationService(private val usersService: UsersService,
         return keyboardMarkup
     }
 
-//    fun handleOperation(chatId: Long, text: String): BotApiMethod<Message> {
+//    fun handleCommand(chatId: Long, text: String): BotApiMethod<Message> {
 //        val operation = operationQueue[chatId]
 //
 //        if (operation != null) {

@@ -58,7 +58,12 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
     }
 
     private fun callback(update: Update): BotApiMethod<Message> {
-        return SendMessage().setChatId(update.callbackQuery.message.chatId).setText("Callback message")
+        val chatId = update.callbackQuery.message.chatId!!
+        val messageId = update.callbackQuery.message.messageId!!.toLong()
+        val callData = update.callbackQuery.data
+
+        return quizletOperationService.handleCallback(chatId, messageId, callData)
+//        return SendMessage().setChatId(update.callbackQuery.message.chatId).setText("Callback message")
     }
 
     private fun commandMessage(update: Update): BotApiMethod<Message> {
@@ -66,8 +71,8 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
             "/start" -> SendMessage().setChatId(update.message?.chatId).setText(DEFAULT_MESSAGE)
             "/help" -> SendMessage().setChatId(update.message?.chatId).setText(DEFAULT_MESSAGE)
             "/connect" -> {
-                val chatId = update.message?.chatId
-                val quizletConnectUrl = quizletOperationService.connectToQuizlet(chatId!!)
+                val chatId = update.message.chatId
+                val quizletConnectUrl = quizletOperationService.connectToQuizlet(chatId)
 
                 SendMessage().setChatId(update.message?.chatId).setText(quizletConnectUrl)
             }
