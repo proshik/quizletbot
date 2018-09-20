@@ -46,10 +46,7 @@ class QuizletInfoService(private val accountRepository: AccountRepository,
         val studiedSetsBySetId = studied.groupBy { userStudiedResp: UserStudiedResp -> userStudiedResp.set.id }
 
         return sets.map { set ->
-            val modeStats = studiedSetsBySetId[set.id]
-//                    ?.filter { us -> us.finishDate != null }
-                    .orEmpty()
-                    .map { us -> ModeStat(defineModeType(us.mode), us.startDate, us.finishDate, us.formattedScore) }
+            val modeStats = studiedSetsBySetId[set.id].orEmpty().map { us -> ModeStat(defineModeType(us.mode), us.startDate, us.finishDate, us.formattedScore) }
 
             SetStat(set.id, set.title, set.url, set.createdDate, set.publishedDate, modeStats)
         }
