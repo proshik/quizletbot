@@ -2,8 +2,10 @@ package ru.proshik.english.quizlet.telegramBot.service
 
 import org.springframework.stereotype.Service
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
+import org.telegram.telegrambots.meta.api.methods.ParseMode
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
-import org.telegram.telegrambots.meta.api.objects.Message
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup
+import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
@@ -11,6 +13,7 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.Keyboard
 import ru.proshik.english.quizlet.telegramBot.service.command.StatisticCommand
 import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
 import ru.proshik.english.quizlet.telegramBot.service.model.Statistics
+import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
 @Service
@@ -31,7 +34,7 @@ class QuizletOperationService(private val usersService: UsersService,
 
     val commandQueue = ConcurrentHashMap<Long, StatisticCommand>()
 
-    val cacheCommand = HashMap<Long, Statistics>()
+    val cacheCommand = HashMap<Long, Pair<Int, Statistics>>()
 
     fun connectToQuizlet(chatId: Long): String {
         val user = usersService.getUser(chatId.toString())
@@ -42,15 +45,16 @@ class QuizletOperationService(private val usersService: UsersService,
         return authenticationService.generateAuthUrl(chatId.toString())
     }
 
-    fun handleCommand(chatId: Long, text: String): BotApiMethod<Message> {
+    fun handleCommand(chatId: Long, text: String, messageId: Int? = null): BotApiMethod<out Serializable> {
         val activeUserCommand = commandQueue[chatId]
+
         if (activeUserCommand == null) {
             return when (text) {
                 STATISTIC_COMMAND -> {
                     // clear the cache of result statistic the previous operation
                     cacheCommand.remove(chatId)
 
-                    val initCommand = initStaticCommand(chatId);
+                    val initCommand = initStatic(chatId);
                     formatStep(chatId, initCommand.first, initCommand.second)
                 }
                 else -> SendMessage().setChatId(chatId).setText("Select Operation")
@@ -84,7 +88,7 @@ class QuizletOperationService(private val usersService: UsersService,
 
                     commandQueue[chatId] = activeUserCommand
 
-                    return formatStep(chatId, items, true)
+                    return formatStep(chatId, items, true, false, messageId)
                 }
                 StatisticCommand.Step.SELECT_SET -> {
                     val userGroups = quizletInfoService.userGroups(chatId)
@@ -105,24 +109,183 @@ class QuizletOperationService(private val usersService: UsersService,
 
                     val statistics = quizletInfoService.buildStatistic(chatId, group.id, setIds, userGroups)
 
-                    cacheCommand[chatId] = statistics
+                    cacheCommand[chatId] = Pair(1, statistics)
 
                     commandQueue.remove(chatId)
 
-                    return formatResult(chatId, statistics)
+                    return formatResult(chatId, statistics, messageId!!)
                 }
                 else -> throw RuntimeException("unexpected")
             }
         }
     }
 
-    fun handleCallback(chatId: Long, messageId: Long, callData: String): BotApiMethod<Message> {
+    fun handleCallback(chatId: Long, messageId: Int, callData: String): BotApiMethod<out Serializable> {
         val statistics = cacheCommand[chatId]
+//        return EditMessageText()
+//                .setChatId(chatId)
+////                        .setReplyMarkup(buildInlineKeyboardMarkup1())
+//                .setMessageId(messageId)
+//                .setText("test")
 
-        return SendMessage().setChatId(chatId).setText("Callback message")
+
+        if (statistics != null) {
+            if (callData == "previous") {
+                val ms: String
+                if (statistics.first > 1) {
+                    val set = statistics.second.setsStats[statistics.first - 1]
+
+                    val res = java.lang.StringBuilder("Set: *${set.title}*\n")
+
+                    val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
+
+                    for (mode in ModeType.values()) {
+                        if (modeStatByMode.containsKey(mode)) {
+                            val modeStat = modeStatByMode[mode]
+
+                            val valueStat = if (modeStat?.last()?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
+                            res.append("_${mode.title}_ ($valueStat) ")
+
+                            // TODO handle it beautifully
+                            //                    if (modeStat?.formattedScore != null) res.append(" ${modeStat.formattedScore}")
+
+                            res.append("\n")
+                        } else {
+                            res.append("${mode.title} (*-*)\n")
+                        }
+                    }
+                    // TODO url must be uncomment in the all places
+//                    res.append(set.url)
+                    res.append("\n")
+
+                    ms = res.toString()
+
+                    cacheCommand[chatId] = Pair(statistics.first - 1, statistics.second)
+
+                } else {
+                    ms = "null"
+                }
+
+                return EditMessageText()
+                        .setChatId(chatId)
+                        .setParseMode(ParseMode.MARKDOWN)
+                        .setReplyMarkup(buildInlineKeyboardMarkup())
+//                        .setReplyMarkup(buildInlineKeyboardMarkup1())
+                        .setMessageId(messageId)
+                        .setText(ms)
+            } else if (callData == "next") {
+                val ms: String
+                if (statistics.first < statistics.second.setsStats.size - 1) {
+                    val set = statistics.second.setsStats[statistics.first + 1]
+
+                    val res = java.lang.StringBuilder("Set: *${set.title}*\n")
+
+                    val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
+
+                    for (mode in ModeType.values()) {
+                        if (modeStatByMode.containsKey(mode)) {
+                            val modeStat = modeStatByMode[mode]
+
+                            val valueStat = if (modeStat?.last()?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
+                            res.append("_${mode.title}_ ($valueStat) ")
+
+                            // TODO handle it beautifully
+                            //                    if (modeStat?.formattedScore != null) res.append(" ${modeStat.formattedScore}")
+
+                            res.append("\n")
+                        } else {
+                            res.append("${mode.title} (*-*)\n")
+                        }
+                    }
+//                    res.append(set.url)
+                    res.append("\n")
+
+                    ms = res.toString()
+
+                    cacheCommand[chatId] = Pair(statistics.first + 1, statistics.second)
+                } else {
+                    ms = "null"
+                }
+
+
+                return EditMessageText()
+                        .setChatId(chatId)
+                        .setParseMode(ParseMode.MARKDOWN)
+                        .setReplyMarkup(buildInlineKeyboardMarkup())
+//                        .setReplyMarkup(buildInlineKeyboardMarkup1())
+                        .setMessageId(messageId)
+                        .setText(ms)
+            } else {
+                return SendMessage().setChatId(chatId).setText("Callback message")
+            }
+        }
+
+        val activeUserCommand = commandQueue[chatId]
+        if (activeUserCommand != null) {
+            val items: MutableList<String> = ArrayList()
+            when (activeUserCommand.currentStep) {
+                StatisticCommand.Step.SELECT_GROUP -> {
+                    val userGroups = quizletInfoService.userGroups(chatId)
+
+                    val group = userGroups.asSequence().filter { group -> group.name == callData }.firstOrNull()
+                    if (group == null) {
+                        commandQueue.remove(chatId)
+                        return SendMessage().setChatId(chatId).setText("Doesn't find group for $callData")
+                                .setReplyMarkup(buildDefaultKeyboard())
+                    }
+
+                    for (set in group.sets.sortedByDescending { set -> set.publishedDate }) {
+                        items.add(set.title)
+                    }
+
+                    if (items.isEmpty()) {
+                        commandQueue.remove(chatId)
+                        return SendMessage().setChatId(chatId).setText("Doesn't find not one set for ${group.name}")
+                                .setReplyMarkup(buildDefaultKeyboard())
+                    }
+
+                    activeUserCommand.groupId = group.id
+                    activeUserCommand.currentStep = StatisticCommand.Step.SELECT_SET
+
+                    commandQueue[chatId] = activeUserCommand
+
+                    return formatStep(chatId, items, true, true, messageId)
+                }
+                StatisticCommand.Step.SELECT_SET -> {
+                    val userGroups = quizletInfoService.userGroups(chatId)
+
+                    val group = userGroups.asSequence().filter { group -> group.id == activeUserCommand.groupId }.first()
+
+                    val setIds = if (callData == "All") {
+                        group.sets.map { set -> set.id }
+                    } else {
+                        group.sets.asSequence().filter { set -> set.title == callData }.map { set -> set.id }.toList()
+                    }
+
+                    if (setIds.isEmpty()) {
+                        commandQueue.remove(chatId)
+                        return SendMessage().setChatId(chatId).setText("Incorrect request. The operation will start from the beginning")
+                                .setReplyMarkup(buildDefaultKeyboard())
+                    }
+
+                    val s = quizletInfoService.buildStatistic(chatId, group.id, setIds, userGroups)
+
+                    cacheCommand[chatId] = Pair(1, s)
+
+                    commandQueue.remove(chatId)
+
+                    return formatResult(chatId, s, messageId)
+                }
+                else -> throw RuntimeException("unexpected")
+
+            }
+        }
+
+        cacheCommand.remove(chatId)
+        return EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
     }
 
-    private fun initStaticCommand(chatId: Long): Pair<List<String>, Boolean> {
+    private fun initStatic(chatId: Long): Pair<List<String>, Boolean> {
         val command = StatisticCommand(chatId)
 
         val userGroups = quizletInfoService.userGroups(chatId)
@@ -154,64 +317,53 @@ class QuizletOperationService(private val usersService: UsersService,
         return Pair(items, setStep)
     }
 
-    private fun formatStep(chatId: Long, items: List<String>, all: Boolean = false): BotApiMethod<Message> {
-        val message = SendMessage().setChatId(chatId)
+    private fun formatStep(chatId: Long, items: List<String>,
+                           all: Boolean = false,
+                           new: Boolean = false,
+                           messageId: Int? = null): BotApiMethod<out Serializable> {
 
-        val keyboardMarkup = ReplyKeyboardMarkup()
-        keyboardMarkup.oneTimeKeyboard = true
+        val markupInline = InlineKeyboardMarkup()
 
-        val rows = ArrayList<KeyboardRow>()
-
+        val rows = ArrayList<List<InlineKeyboardButton>>()
+        // Set the keyboard to the markup
         if (all) {
-            val allRow = KeyboardRow()
-            allRow.add("All")
-            rows.add(allRow)
+            val rowInline = ArrayList<InlineKeyboardButton>()
+            rowInline.add(InlineKeyboardButton().setText("All").setCallbackData("All"))
+            rows.add(rowInline)
         }
 
+        var i = 1
+        var row = ArrayList<InlineKeyboardButton>()
         for (item in items) {
-            val row = KeyboardRow()
-            row.add(item)
-            rows.add(row)
+
+            row.add(InlineKeyboardButton().setText(item).setCallbackData(item))
+
+            if (i % 4 == 0) {
+                rows.add(row)
+                i = 1
+                row = ArrayList()
+            } else {
+                i++
+            }
         }
 
-        keyboardMarkup.keyboard = rows
+        rows.add(row)
 
-        message.replyMarkup = keyboardMarkup
-        message.text = "Select item:"
-
-        return message
+        markupInline.keyboard = rows
+        if (new) {
+            return EditMessageReplyMarkup().setChatId(chatId).setReplyMarkup(markupInline).setMessageId(messageId)
+        } else {
+            return SendMessage().setChatId(chatId).setText("Select Item:").setReplyMarkup(markupInline)
+        }
     }
 
-    private fun formatResult(chatId: Long, statistics: Statistics): BotApiMethod<Message> {
-        val res = StringBuilder("Group: *${statistics.groupName}*\n\n")
+    private fun formatResult(chatId: Long, statistics: Statistics, messageId: Int): BotApiMethod<out Serializable> {
+        val res = buildFinalREs(statistics)
 
-        for (set in statistics.setsStats.sortedByDescending { set -> set.publishedDate }) {
-            res.append("Set: *${set.title}*\n")
-
-            val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
-
-            for (mode in ModeType.values()) {
-                if (modeStatByMode.containsKey(mode)) {
-                    val modeStat = modeStatByMode[mode]
-
-                    val valueStat = if (modeStat?.last()?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
-                    res.append("_${mode.title}_ ($valueStat) ")
-
-                    // TODO handle it beautifully
-//                    if (modeStat?.formattedScore != null) res.append(" ${modeStat.formattedScore}")
-
-                    res.append("\n")
-                } else {
-                    res.append("${mode.title} (*-*)\n")
-                }
-            }
-            res.append(set.url)
-            res.append("\n")
-        }
-
-        val message = SendMessage()
+        val message = EditMessageText()
                 .enableMarkdown(true)
                 .setChatId(chatId)
+                .setMessageId(messageId)
 //                .setReplyMarkup(buildDefaultKeyboard())
                 .setText(res.toString())
 
@@ -220,6 +372,38 @@ class QuizletOperationService(private val usersService: UsersService,
         }
 
         return message
+    }
+
+    fun buildFinalREs(statistics: Statistics): String {
+        val res = StringBuilder("Group: *${statistics.groupName}*\n\n")
+
+        val sets = statistics.setsStats.sortedByDescending { set -> set.publishedDate }
+
+        val set = sets.first()
+//        for (set in sets.fir) {
+        res.append("Set: *${set.title}*\n")
+
+        val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
+
+        for (mode in ModeType.values()) {
+            if (modeStatByMode.containsKey(mode)) {
+                val modeStat = modeStatByMode[mode]
+
+                val valueStat = if (modeStat?.last()?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
+                res.append("_${mode.title}_ ($valueStat) ")
+
+                // TODO handle it beautifully
+                //                    if (modeStat?.formattedScore != null) res.append(" ${modeStat.formattedScore}")
+
+                res.append("\n")
+            } else {
+                res.append("${mode.title} (*-*)\n")
+            }
+        }
+//            res.append(set.url)
+        res.append("\n")
+//        }
+        return res.toString()
     }
 
     private fun buildInlineKeyboardMarkup(): InlineKeyboardMarkup {
@@ -261,7 +445,7 @@ class QuizletOperationService(private val usersService: UsersService,
         return keyboardMarkup
     }
 
-//    fun handleCommand(chatId: Long, text: String): BotApiMethod<Message> {
+//    fun handleCommand(chatId: Long, text: String): BotApiMethod<out Serializable> {
 //        val operation = operationQueue[chatId]
 //
 //        if (operation != null) {
@@ -275,7 +459,7 @@ class QuizletOperationService(private val usersService: UsersService,
 //            // TODO change text
 //            return SendMessage().setChatId(chatId).setText("Default message like \"use the keyboard and bla-bla-bla\"")
 //        } else {
-//            val initResult = operationEvent.init()
+//            val initResult = operationEvent.initOperation()
 //
 //            return operationEvent.formatter.format(initResult)
 //        }

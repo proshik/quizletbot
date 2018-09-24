@@ -22,6 +22,7 @@ public class BotApi20 extends TelegramLongPollingBot {
 
     @Override
     public void onUpdateReceived(Update update) {
+
         // We check if the update has a message and the message has text
         if (update.hasMessage() && update.getMessage().hasText()) {
             long chat_id = update.getMessage().getChatId();
@@ -60,12 +61,13 @@ public class BotApi20 extends TelegramLongPollingBot {
                     e.printStackTrace();
                 }
             } else if (call_data.equals("next")) {
+
                 EditMessageReplyMarkup editMessageReplyMarkup = new EditMessageReplyMarkup();
 
                 String answer = "nextValue" + ++nextCount;
                 EditMessageText new_message = new EditMessageText()
                         .setChatId(chat_id)
-                        .setReplyMarkup(buildInlineKeyboardMarkup1())
+                        .setReplyMarkup(buildInlineKeyboardMarkup())
                         .setMessageId(toIntExact(message_id))
                         .setText(answer);
                 try {
@@ -94,33 +96,16 @@ public class BotApi20 extends TelegramLongPollingBot {
         return markupInline;
     }
 
-    @NotNull
-    private InlineKeyboardMarkup buildInlineKeyboardMarkup1() {
-        InlineKeyboardMarkup markupInline = new InlineKeyboardMarkup();
-        List<List<InlineKeyboardButton>> rowsInline = new ArrayList<>();
-
-        List<InlineKeyboardButton> rowInline = new ArrayList<>();
-        rowInline.add(new InlineKeyboardButton().setText("1").setCallbackData("previous"));
-        rowInline.add(new InlineKeyboardButton().setText("2").setCallbackData("next"));
-
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline);
-
-        // Add it to the message
-        markupInline.setKeyboard(rowsInline);
-        return markupInline;
-    }
-
     @Override
     public String getBotUsername() {
         // Return bot username
         // If bot username is @MyAmazingBot, it must return 'MyAmazingBot'
-        return "";
+        return "testbot_dev_bot";
     }
 
     @Override
     public String getBotToken() {
         // Return bot token from BotFather
-        return "";
+        return "611962903:AAHq6exkrbRAahM44fLTcyB4wl3aUSoDmbc";
     }
 }
