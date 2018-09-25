@@ -40,12 +40,15 @@ class OperationService(private val usersService: UsersService,
 
     fun handleOperation(chatId: Long, text: String): BotApiMethod<out Serializable> {
         return if (OPERATIONS.contains(text)) {
-            val operationStep = operationRunner(chatId, OperationType.valueOf(text))
+            val operationStep = when (OperationType.valueOf(text)) {
+                OperationType.STUDIED -> studiedOperation.initOperation(chatId)
+                OperationType.NOTIFICATIONS -> null
+            }
+
             if (operationStep == null) {
                 SendMessage().setChatId(chatId).setText("Data doesn't find")
             } else {
                 operationData[chatId] = operationStep.pipeline
-//                messageFormatter.editMessageInlineKeyboard()
                 TODO()
             }
         } else {

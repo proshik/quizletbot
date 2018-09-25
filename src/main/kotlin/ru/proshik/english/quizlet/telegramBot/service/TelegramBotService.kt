@@ -8,13 +8,10 @@ import org.telegram.telegrambots.bots.TelegramLongPollingBot
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
 import org.telegram.telegrambots.meta.bots.AbsSender
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.meta.updateshandlers.SentCallback
 import java.io.Serializable
-import java.util.*
 
 @Component
 class TelegramBotService(@Value("\${telegram.token}") private val token: String,
@@ -30,7 +27,7 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
     }
 
     @Suppress("EXTENSION_SHADOWED_BY_MEMBER")
-    private fun <T: Serializable> AbsSender.execute(message: BotApiMethod<T>) {
+    private fun <T : Serializable> AbsSender.execute(message: BotApiMethod<T>) {
         this.execute(message)
     }
 
@@ -54,14 +51,15 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
     fun onWebHookUpdateReceived(update: Update): BotApiMethod<out Serializable> = when {
         update.hasMessage() -> message(update)
         update.hasCallbackQuery() -> callback(update)
-        else -> throw RuntimeException("Unexpected situation")
+        update.hasEditedMessage() -> SendMessage().setChatId(update.message.chatId).setText("doesn't support operation. The edited Message")
+        else -> SendMessage().setChatId(update.message.chatId).setText("unexpected operation")
     }
 
     private fun message(update: Update): BotApiMethod<out Serializable> = when {
         update.message.isCommand -> commandMessage(update)
-//        update.message.isReply -> SendMessage().setChatId(update.message.chatId).setText("isReply")
-//        update.message.isUserMessage -> SendMessage().setChatId(update.message.chatId).setText("isUserMessage")
-        else -> operationMessage(update)
+        update.message.isReply -> SendMessage().setChatId(update.message.chatId).setText("isReply")
+        update.message.isUserMessage -> operationMessage(update)
+        else -> SendMessage().setChatId(update.message.chatId).setText("unexpected type of message")
     }
 
     private fun callback(update: Update): BotApiMethod<out Serializable> {
@@ -87,34 +85,9 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
     }
 
     private fun operationMessage(update: Update): BotApiMethod<out Serializable> {
-        val chatId = update.message.chatId
-        val text = update.message.text
-
-        return quizletOperationService.handleCommand(chatId, text)
+        return quizletOperationService.handleCommand(update.message.chatId, update.message.text)
     }
 
-
-    private fun keyboard(update: Update): BotApiMethod<out Serializable> {
-        val message = SendMessage() // Create a message object object
-                .setChatId(update.message.chatId)
-                .setText("You send /start")
-
-        val markupInline = InlineKeyboardMarkup()
-
-        val rowsInline = ArrayList<List<InlineKeyboardButton>>()
-
-        val rowInline = ArrayList<InlineKeyboardButton>()
-        rowInline.add(InlineKeyboardButton().setText("Update message text").setCallbackData("update_msg_text"))
-
-        // Set the keyboard to the markup
-        rowsInline.add(rowInline)
-
-        // Add it to the message
-        markupInline.keyboard = rowsInline
-        message.replyMarkup = markupInline
-
-        return message
-    }
 
 //    fun sendCustomKeyboard(update: Update): BotApiMethod<out Serializable> {
 //        val message = SendMessage()
