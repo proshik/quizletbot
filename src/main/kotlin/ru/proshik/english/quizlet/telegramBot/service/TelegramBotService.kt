@@ -59,8 +59,8 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
 
     private fun message(update: Update): BotApiMethod<out Serializable> = when {
         update.message.isCommand -> commandMessage(update)
-        update.message.isReply -> SendMessage().setChatId(update.message.chatId).setText("isReply")
-        update.message.isUserMessage -> SendMessage().setChatId(update.message.chatId).setText("isUserMessage")
+//        update.message.isReply -> SendMessage().setChatId(update.message.chatId).setText("isReply")
+//        update.message.isUserMessage -> SendMessage().setChatId(update.message.chatId).setText("isUserMessage")
         else -> operationMessage(update)
     }
 

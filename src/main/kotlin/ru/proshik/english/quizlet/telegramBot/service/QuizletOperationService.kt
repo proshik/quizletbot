@@ -338,7 +338,7 @@ class QuizletOperationService(private val usersService: UsersService,
 
             row.add(InlineKeyboardButton().setText(item).setCallbackData(item))
 
-            if (i % 4 == 0) {
+            if (i % 1 == 0) {
                 rows.add(row)
                 i = 1
                 row = ArrayList()
@@ -424,6 +424,7 @@ class QuizletOperationService(private val usersService: UsersService,
 
     private fun buildDefaultKeyboard(): ReplyKeyboardMarkup {
         val keyboardMarkup = ReplyKeyboardMarkup()
+        keyboardMarkup.resizeKeyboard = true
 
         val rows = ArrayList<KeyboardRow>()
 
