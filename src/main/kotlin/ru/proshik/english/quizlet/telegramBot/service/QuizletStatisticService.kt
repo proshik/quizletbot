@@ -24,13 +24,13 @@ class QuizletStatisticService(private val quizletClient: QuizletClient) {
                 .groupBy { userStudiedResp: UserStudiedResp -> userStudiedResp.set.id }
 
         val result: MutableMap<UserGroupsResp, Map<SetResp, List<StudiedModes>>> = HashMap()
-        for (group in userGroups.filter { group -> statFilter?.groupIds?.contains(group.id) ?: true }) {
+        for (group in userGroups.filter { statFilter?.groupIds?.contains(it.id) ?: true }) {
             val setStat: MutableMap<SetResp, List<StudiedModes>> = HashMap()
-            for (set in group.sets.filter { set -> statFilter?.setIds?.contains(set.id) ?: true }) {
+            for (set in group.sets.filter { statFilter?.setIds?.contains(it.id) ?: true }) {
                 val studiedModes = studiedSetsBySetId[set.id]
                         ?.filter { us -> us.finishDate != null }
                         .orEmpty()
-                        .map { us -> StudiedModes(us.mode, us.startDate, us.finishDate, us.formattedScore) }
+                        .map { StudiedModes(it.mode, it.startDate, it.finishDate, it.formattedScore) }
                 setStat[set] = studiedModes
             }
             result[group] = setStat
