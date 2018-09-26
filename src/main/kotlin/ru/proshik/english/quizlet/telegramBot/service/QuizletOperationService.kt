@@ -34,7 +34,7 @@ class QuizletOperationService(private val usersService: UsersService,
 
     val commandQueue = ConcurrentHashMap<Long, StatisticCommand>()
 
-    val cacheCommand = HashMap<Long, Pair<Int, Statistics>>()
+    val cacheCommand = ConcurrentHashMap<Long, Pair<Int, Statistics>>()
 
     fun connectToQuizlet(chatId: Long): String {
         val user = usersService.getUser(chatId.toString())
@@ -93,17 +93,24 @@ class QuizletOperationService(private val usersService: UsersService,
                 StatisticCommand.Step.SELECT_SET -> {
                     val userGroups = quizletInfoService.userGroups(chatId)
 
-                    val group = userGroups.asSequence().filter { group -> group.id == activeUserCommand.groupId }.first()
+                    val group = userGroups.asSequence()
+                            .filter { group -> group.id == activeUserCommand.groupId }
+                            .first()
 
                     val setIds = if (text == "All") {
                         group.sets.map { set -> set.id }
                     } else {
-                        group.sets.asSequence().filter { set -> set.title == text }.map { set -> set.id }.toList()
+                        group.sets.asSequence()
+                                .filter { set -> set.title == text }
+                                .map { set -> set.id }
+                                .toList()
                     }
 
                     if (setIds.isEmpty()) {
                         commandQueue.remove(chatId)
-                        return SendMessage().setChatId(chatId).setText("Incorrect request. The operation will start from the beginning")
+                        return SendMessage()
+                                .setChatId(chatId)
+                                .setText("Incorrect request. The operation will start from the beginning")
                                 .setReplyMarkup(buildDefaultKeyboard())
                     }
 
@@ -122,13 +129,6 @@ class QuizletOperationService(private val usersService: UsersService,
 
     fun handleCallback(chatId: Long, messageId: Int, callData: String): BotApiMethod<out Serializable> {
         val statistics = cacheCommand[chatId]
-//        return EditMessageText()
-//                .setChatId(chatId)
-////                        .setReplyMarkup(buildInlineKeyboardMarkup1())
-//                .setMessageId(messageId)
-//                .setText("test")
-
-
         if (statistics != null) {
             if (callData == "previous") {
                 val ms: String
@@ -137,7 +137,9 @@ class QuizletOperationService(private val usersService: UsersService,
 
                     val res = java.lang.StringBuilder("Set: *${set.title}*\n")
 
-                    val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
+                    val modeStatByMode = set.modeStats
+                            .groupBy { modeStat -> modeStat.mode }
+                            .toMap()
 
                     for (mode in ModeType.values()) {
                         if (modeStatByMode.containsKey(mode)) {
@@ -450,7 +452,7 @@ class QuizletOperationService(private val usersService: UsersService,
 //        val operation = operationQueue[chatId]
 //
 //        if (operation != null) {
-//            val operationHandle = operation.nextStep(text)
+//            val operationHandle = operation.navigate(text)
 //            // TODO remove cast after transform to kotlin code
 //            return operation.formatter.format(operationHandle)
 //        }
@@ -460,7 +462,7 @@ class QuizletOperationService(private val usersService: UsersService,
 //            // TODO change text
 //            return SendMessage().setChatId(chatId).setText("Default message like \"use the keyboard and bla-bla-bla\"")
 //        } else {
-//            val initResult = operationEvent.initOperation()
+//            val initResult = operationEvent.init()
 //
 //            return operationEvent.formatter.format(initResult)
 //        }

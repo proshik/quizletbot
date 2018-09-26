@@ -1,202 +1,235 @@
 package ru.proshik.english.quizlet.telegramBot.service.operation
 
 import org.springframework.stereotype.Component
-import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup
-import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
-import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
+import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.service.QuizletInfoService
 import ru.proshik.english.quizlet.telegramBot.service.action.MessageFormatter
-import java.io.Serializable
+import ru.proshik.english.quizlet.telegramBot.service.action.MessageFormatter.Companion.ALL_ITEMS
+import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
+import ru.proshik.english.quizlet.telegramBot.service.model.Statistics
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SELECT_GROUP
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SELECT_SET
+import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
     val messageFormatter = MessageFormatter()
 
-    enum class StudiedOperationStep : OperationStep {
-        SELECT_GROUP,
-        SELECT_SET;
+    companion object {
+        const val GROUP_ID = "group_id"
     }
 
-    override fun initOperation(chatId: Long): OperationStepInfo? {
+    enum class StepType {
+        SELECT_GROUP,
+        SELECT_SET
+    }
+
+    data class ActiveStep(val stepType: StepType, val userGroups: List<UserGroupsResp>, val groupId: Long?)
+
+    data class OperationResult(val showedItem: Int, val statistics: Statistics)
+
+    private val stepStore = ConcurrentHashMap<Long, ActiveStep>()
+
+    private val operationResultStore = ConcurrentHashMap<Long, OperationResult>()
+
+    override fun init(chatId: Long): InitResult {
         val userGroups = quizletInfoService.userGroups(chatId)
 
-        return when {
+        //TODO do refactoring that ugly code
+        val text: String
+        val stepType: StepType
+        var groupId: Long? = null
+        val outputData: List<Pair<String, String>>
+        when {
             userGroups.size > 1 -> {
-                val outputData = userGroups.asSequence()
+                text = """Select set(s):"""
+                stepType = SELECT_GROUP
+                outputData = userGroups.asSequence()
                         .map { group -> Pair(group.name, group.id.toString()) }
                         .toList()
-
-                val operationInfo = OperationPipeline(OperationType.NOTIFICATIONS, StudiedOperationStep.SELECT_GROUP)
-
-                OperationStepInfo(operationInfo, outputData)
             }
             userGroups.size == 1 -> {
-                val outputData = userGroups[0].sets.asSequence()
+                text = """Select group:"""
+                groupId = userGroups[0].id
+                stepType = SELECT_SET
+                outputData = userGroups[0].sets.asSequence()
                         .sortedByDescending { set -> set.publishedDate }
                         .map { set -> Pair(set.title, set.id.toString()) }
                         .toList()
-
-
-                val data = mapOf("group_id" to userGroups[0].id.toString())
-                val operationInfo = OperationPipeline(OperationType.NOTIFICATIONS, StudiedOperationStep.SELECT_SET, data)
-
-                OperationStepInfo(operationInfo, outputData)
             }
-            userGroups.isEmpty() -> null
-            else -> throw RuntimeException("unreacheble path for initialize studied opeartion")
-        }
-    }
-
-    override fun nextSubOperation(chatId: Long, messageId: Int, callData: String, operationPipeline: OperationPipeline): BotApiMethod<out Serializable> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
-    }
-
-    fun navigateBySteps(chatId: Long,
-                        messageId: Int,
-                        messageText: String,
-                        items: List<Pair<String, String>>,
-                        itemInRow: Int = 1,
-                        itemFrom: Int = 1,
-                        itemTill: Int = 5,
-                        showAllLine: Boolean = false,
-                        isNewMessage: Boolean = true): BotApiMethod<out Serializable> {
-
-        // check input params
-        if (items.isEmpty()) throw IllegalArgumentException("unexpectable count of values items=${items.size}")
-        if (itemFrom >= itemTill) throw IllegalArgumentException("itemFrom=$itemFrom equals or more itemTill=$itemTill")
-        if (itemInRow < 1) throw IllegalArgumentException("unexpectable value itemInRow=$itemInRow")
-        if (itemInRow > 1 && itemInRow < (itemTill - itemFrom))
-            throw IllegalArgumentException("incompatible values itemInRow=$itemInRow and borders itemFrom=$itemFrom, itemTill=$itemTill")
-
-        // calculate value of items on one line
-        val countItemOnLine = if (itemInRow != 1 && items.size > itemInRow) itemInRow else items.size
-        // initialize rows
-        val rows = ArrayList<List<InlineKeyboardButton>>()
-        // check and add the first line with a title "All items"
-        if (showAllLine && items.size > 1) {
-            val allElementRow = ArrayList<InlineKeyboardButton>()
-            allElementRow.add(InlineKeyboardButton().setText("All items").setCallbackData("-1"))
-            rows.add(allElementRow)
+            else -> throw RuntimeException("unreacheble path for initialize studied operation")
         }
 
-        // main block. Fill items
-        var i = 1
-        var itemRows = ArrayList<InlineKeyboardButton>()
-        for (item in items) {
-            itemRows.add(InlineKeyboardButton().setText(item.first).setCallbackData(item.second))
-
-            if (i % countItemOnLine == 0) {
-                rows.add(itemRows)
-                i = 1
-                itemRows = ArrayList()
-            } else {
-                i++
-            }
-        }
-        rows.add(itemRows)
-
-        // add buttons to navigate
-//        var navigateRow = ArrayList<InlineKeyboardButton>()
-//        for (i in itemFrom..itemTill) {
-//            navigateRow.add(InlineKeyboardButton().setText(item.first).setCallbackData(item.second))
-//        }
-//        rows.add(navigateRow)
-
-
-        val keyboard = InlineKeyboardMarkup()
-        keyboard.keyboard = rows
-
-        return if (isNewMessage)
-            SendMessage().setChatId(chatId).setText(messageText).setReplyMarkup(keyboard)
-        else
-            EditMessageText().setChatId(chatId).setMessageId(messageId).setText(messageText).setReplyMarkup(keyboard)
-//            EditMessageReplyMarkup().setChatId(chatId).setReplyMarkup(keyboard).setMessageId(messageId)
-    }
-
-    fun navigateByItems(chatId: Long,
-                        messageId: Int,
-                        messageText: String,
-                        items: List<Pair<String, String>>,
-                        currentItem: Int = 0): BotApiMethod<out Serializable> {
-
-        // check input params
-        if (items.isEmpty()) throw IllegalArgumentException("unexpectable count of values items=${items.size}")
-
-        // initialize rows
-        val rows = ArrayList<List<InlineKeyboardButton>>()
-
-        // main block. Fill items
-        var i = 1
-        var numberRow = ArrayList<InlineKeyboardButton>()
-        for (item in 0..2) {
-//            numberRow.add(InlineKeyboardButton().setText(item.first).setCallbackData(item.second))
-//
-//            if (i % countItemOnLine == 0) {
-//                rows.add(numberRow)
-//                i = 1
-//                numberRow = ArrayList()
-//            } else {
-//                i++
-//            }
-        }
-        rows.add(numberRow)
-
-        // add buttons to navigate
-//        var navigateRow = ArrayList<InlineKeyboardButton>()
-//        for (i in itemFrom..itemTill) {
-//            navigateRow.add(InlineKeyboardButton().setText(item.first).setCallbackData(item.second))
-//        }
-//        rows.add(navigateRow)
-
-
-        val keyboard = InlineKeyboardMarkup()
-        keyboard.keyboard = rows
-
-        return EditMessageText().setChatId(chatId).setMessageId(messageId).setText(messageText).setReplyMarkup(keyboard)
-    }
-
-    private fun formatStep(chatId: Long, items: List<String>,
-                           all: Boolean = false,
-                           new: Boolean = false,
-                           messageId: Int? = null): BotApiMethod<out Serializable> {
-
-        val markupInline = InlineKeyboardMarkup()
-
-        val rows = ArrayList<List<InlineKeyboardButton>>()
-        // Set the keyboard to the markup
-        if (all) {
-            val rowInline = ArrayList<InlineKeyboardButton>()
-            rowInline.add(InlineKeyboardButton().setText("All").setCallbackData("All"))
-            rows.add(rowInline)
-        }
-
-        var i = 1
-        var row = ArrayList<InlineKeyboardButton>()
-        for (item in items) {
-
-            row.add(InlineKeyboardButton().setText(item).setCallbackData(item))
-
-            if (i % 1 == 0) {
-                rows.add(row)
-                i = 1
-                row = ArrayList()
-            } else {
-                i++
-            }
-        }
-
-        rows.add(row)
-
-        markupInline.keyboard = rows
-        if (new) {
-            return EditMessageReplyMarkup().setChatId(chatId).setReplyMarkup(markupInline).setMessageId(messageId)
+        return if (outputData.isNotEmpty()) {
+            // save information about active step
+            stepStore[chatId] = ActiveStep(stepType, userGroups, groupId)
+            // build text message with keyboard
+            val message = messageFormatter.navigateBySteps(chatId, text, outputData)
+            // result object
+            InitResult(message, true)
         } else {
-            return SendMessage().setChatId(chatId).setText("Select Item:").setReplyMarkup(markupInline)
+            InitResult(SendMessage().setChatId(chatId).setText("User classes doesn't find"), false)
         }
     }
+
+    override fun navigate(chatId: Long,
+                          messageId: Int,
+                          callData: String): StepResult {
+
+        val activeStep = stepStore[chatId]
+                ?: return StepResult(SendMessage().setChatId(chatId).setText("unexpected transition"), true)
+
+//        val (comand, value) = callData.split(";")
+
+        return when (activeStep.stepType) {
+            SELECT_GROUP -> {
+                buildSetsMessage(chatId, messageId, callData, activeStep)
+            }
+            SELECT_SET -> buildStudied(chatId, messageId, callData, activeStep)
+        }
+
+//        val operationResult = operationResultStore[chatId]
+    }
+
+    private fun buildSetsMessage(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): StepResult {
+        val (command, value) = callData.split(";")
+
+        when (command) {
+            MessageFormatter.NAVIGATION -> TODO()
+            MessageFormatter.ELEMENT -> {
+                val group = activeStep.userGroups.asSequence().filter { group -> group.name == value }.firstOrNull()
+
+                if (group == null) {
+                    stepStore.remove(chatId)
+                    return StepResult(SendMessage().setChatId(chatId).setText("Doesn't find group for $value"), true)
+//                            .setReplyMarkup(buildDefaultKeyboard())
+                }
+
+                val items = group.sets.asSequence()
+                        .sortedByDescending { set -> set.publishedDate }
+                        .map { it -> Pair(it.title, it.id.toString()) }.toList()
+
+                if (items.isEmpty()) {
+                    stepStore.remove(chatId)
+                    return StepResult(SendMessage().setChatId(chatId).setText("Doesn't find not one set for ${group.name}"), true)
+//                            .setReplyMarkup(buildDefaultKeyboard())
+                }
+
+                stepStore[chatId] = ActiveStep(SELECT_SET, activeStep.userGroups, group.id)
+
+                val text = StringBuilder("Group: *${group.name}*\n")
+                text.append("Select a set from group: ")
+
+                val message = messageFormatter.navigateBySteps(chatId, text.toString(), items, messageId, showAllLine = true)
+
+                // need to remove a previous statustics result
+                operationResultStore.remove(chatId)
+
+                return StepResult(message, false)
+            }
+            else -> throw RuntimeException("unexpected callbackData=$callData")
+        }
+    }
+
+    private fun buildStudied(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): StepResult {
+        val (command, value) = callData.split(";")
+
+//        val operationResult = operationResultStore[chatId]
+//
+//        // if operation to that message is finished then execute to navigate
+//        if (operationResult != null) {
+//
+//        }
+
+        return when (command) {
+            MessageFormatter.NAVIGATION -> {
+                val operationResult = operationResultStore[chatId]
+                        ?: throw RuntimeException("not available command=$command for step")
+
+                val text = createMessageText(operationResult.statistics)
+
+                val countOfItems = operationResult.statistics.setsStats.size
+                val selectedItem = value.toInt()
+                val message = messageFormatter.navigateByItems(chatId, messageId, text, countOfItems, selectedItem)
+
+                operationResultStore[chatId] = OperationResult(value.toInt(), operationResult.statistics)
+
+                StepResult(message, true)
+            }
+            MessageFormatter.ELEMENT -> {
+                val group = activeStep.userGroups.asSequence()
+                        .filter { group -> group.id == activeStep.groupId }
+                        .first()
+
+                val setIds = if (value == ALL_ITEMS) {
+                    group.sets.map { set -> set.id }
+                } else {
+                    group.sets.asSequence()
+                            .filter { set -> set.id.toString() == value }
+                            .map { set -> set.id }
+                            .toList()
+                }
+
+                stepStore.remove(chatId)
+
+                if (setIds.isEmpty()) {
+                    val message = SendMessage()
+                            .setChatId(chatId)
+                            .setText("Incorrect request. The operation will start from the beginning${group.name}")
+//                            .setReplyMarkup(buildDefaultKeyboard())
+
+                    return StepResult(message, true)
+                }
+
+                val statistics = quizletInfoService.buildStatistic(chatId, group.id, setIds, activeStep.userGroups)
+
+                operationResultStore[chatId] = OperationResult(1, statistics)
+
+                val text = createMessageText(statistics)
+
+                val message = messageFormatter.navigateByItems(chatId, messageId, text, statistics.setsStats.size)
+
+                StepResult(message, true)
+            }
+            else -> throw RuntimeException("unexpected callbackData=$callData")
+        }
+
+    }
+
+    fun createMessageText(statistics: Statistics): String {
+        val res = StringBuilder("Group: *${statistics.groupName}*\n\n")
+
+        val sets = statistics.setsStats.asSequence()
+                .sortedByDescending { set -> set.publishedDate }
+
+        val set = sets.first()
+//        for (set in sets.fir) {
+        res.append("Set: *${set.title}*\n")
+
+        val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
+
+        for (mode in ModeType.values()) {
+            if (modeStatByMode.containsKey(mode)) {
+                val modeStat = modeStatByMode[mode]
+
+                val valueStat = if (modeStat?.last()?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
+                res.append("_${mode.title}_ ($valueStat) ")
+
+                // TODO handle it beautifully
+                //                    if (modeStat?.formattedScore != null) res.append(" ${modeStat.formattedScore}")
+
+                res.append("\n")
+            } else {
+                res.append("${mode.title} (*-*)\n")
+            }
+        }
+//            res.append(set.url)
+        res.append("\n")
+//        }
+        return res.toString()
+    }
+
 
 }

@@ -8,26 +8,40 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import ru.proshik.english.quizlet.telegramBot.service.AuthenticationService
 import ru.proshik.english.quizlet.telegramBot.service.UsersService
-import ru.proshik.english.quizlet.telegramBot.service.action.MessageFormatter
+import ru.proshik.english.quizlet.telegramBot.service.operation.OperationService.Operation.*
 import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
 class OperationService(private val usersService: UsersService,
                        private val authenticationService: AuthenticationService,
-                       private val studiedOperation: StudiedOperation) {
+                       private val studiedOperation: StudiedOperation,
+                       private val notificationOperation: NotificationOperation) {
+
+    enum class Command(name: String) {
+        START("/start"),
+        HELP("/help"),
+        CONNECT("/connect"),
+        RECONNECT("/reconnect")
+    }
+
+    enum class Operation {
+        STUDIED,
+        NOTIFICATIONS
+    }
 
     companion object {
 
         private val LOG = Logger.getLogger(OperationService::class.java)
 
-        private val OPERATIONS = OperationType.values().toList().map { operation -> operation.name }.toList()
+        private val OPERATIONS = values().toList().map { operation -> operation.name }.toList()
 
         private const val DEFAULT_MESSAGE = "This bot can help you get information about studied sets on quizlet.com"
     }
 
-    val messageFormatter = MessageFormatter()
 
-    val operationData = ConcurrentHashMap<Long, OperationPipeline>()
+    data class ActionOperation(val operation: Operation, val messageId: Int? = null)
+
+    private val actionOperationStore = ConcurrentHashMap<Long, ActionOperation>()
 
     fun handleCommand(chatId: Long, command: Command): BotApiMethod<out Serializable> {
         return when (command) {
@@ -39,43 +53,51 @@ class OperationService(private val usersService: UsersService,
     }
 
     fun handleOperation(chatId: Long, text: String): BotApiMethod<out Serializable> {
-
-        OPERATIONS.contains(text)
-
-        return if (OPERATIONS.contains(text)) {
-            val operationStep = when (OperationType.valueOf(text)) {
-                OperationType.STUDIED -> studiedOperation.initOperation(chatId)
-                OperationType.NOTIFICATIONS -> null
-            }
-
-            if (operationStep == null) {
-                SendMessage().setChatId(chatId).setText("Data doesn't find")
-            } else {
-                operationData[chatId] = operationStep.pipeline
-                TODO()
-            }
-        } else {
+        // text message is not operation
+        if (!OPERATIONS.contains(text)) {
             val user = usersService.getUser(chatId.toString())
-            return if (user != null && user.account != null) {
-                SendMessage().setChatId(chatId).setText("Select operation: ").setReplyMarkup(buildMenuKeyboard())
-            } else if (user != null && user.account == null) {
-                SendMessage().setChatId(chatId).setText(authenticationService.generateAuthUrl(chatId.toString()))
-            } else {
-                SendMessage().setChatId(chatId).setText(connectToQuizlet(chatId))
+            return when {
+                user != null && user.account != null ->
+                    SendMessage().setChatId(chatId).setText("Select operation: ").setReplyMarkup(buildMainMenu())
+                user != null && user.account == null ->
+                    SendMessage().setChatId(chatId).setText(authenticationService.generateAuthUrl(chatId.toString()))
+                else ->
+                    SendMessage().setChatId(chatId).setText(connectToQuizlet(chatId))
+            }
+        }
+
+        // text message is operation
+        return when (valueOf(text)) {
+            STUDIED -> {
+                val (message, existData) = studiedOperation.init(chatId)
+
+                if (existData)
+                    actionOperationStore[chatId] = ActionOperation(STUDIED)
+                message
+            }
+            NOTIFICATIONS -> {
+                val (message, existData) = notificationOperation.init(chatId)
+
+                if (existData)
+                    actionOperationStore[chatId] = ActionOperation(NOTIFICATIONS)
+                actionOperationStore[chatId] = ActionOperation(NOTIFICATIONS)
+                message
             }
         }
     }
 
     fun handleCallback(chatId: Long, messageId: Int, callData: String): BotApiMethod<out Serializable> {
-        val data = operationData[chatId]
-        return if (data != null) {
-            when (data.type) {
-                OperationType.STUDIED -> studiedOperation.nextSubOperation(chatId, messageId, callData, data)
-                OperationType.NOTIFICATIONS -> notImplementMessage(chatId)
+        val actionOperations = actionOperationStore[chatId]
+        return if (actionOperations != null) {
+            val (message, finalStep) = when (actionOperations.operation) {
+                STUDIED -> studiedOperation.navigate(chatId, messageId, callData)
+                NOTIFICATIONS -> studiedOperation.navigate(chatId, messageId, callData)
             }
-        } else {
+            if (finalStep) actionOperationStore.remove(chatId)
+            message
+        } else
             EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
-        }
+
     }
 
     private fun connectToQuizlet(chatId: Long): String {
@@ -87,7 +109,23 @@ class OperationService(private val usersService: UsersService,
         return authenticationService.generateAuthUrl(chatId.toString())
     }
 
-    private fun buildMenuKeyboard(): ReplyKeyboardMarkup {
+    private fun buildAuthMenu(): ReplyKeyboardMarkup {
+        val keyboardMarkup = ReplyKeyboardMarkup().apply {
+            resizeKeyboard = true
+            selective = true
+        }
+
+        val rows = ArrayList<KeyboardRow>()
+        val row = KeyboardRow()
+        row.add("Authorize")
+        rows.add(row)
+
+        keyboardMarkup.keyboard = rows
+
+        return keyboardMarkup
+    }
+
+    private fun buildMainMenu(): ReplyKeyboardMarkup {
         val keyboardMarkup = ReplyKeyboardMarkup().apply {
             resizeKeyboard = true
             selective = true
@@ -105,8 +143,5 @@ class OperationService(private val usersService: UsersService,
         return keyboardMarkup
     }
 
-    private fun notImplementMessage(chatId: Long): BotApiMethod<out Serializable> {
-        return SendMessage().setChatId(chatId).setText("Development in process")
-    }
 
 }
