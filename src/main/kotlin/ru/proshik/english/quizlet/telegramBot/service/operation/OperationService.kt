@@ -39,6 +39,9 @@ class OperationService(private val usersService: UsersService,
     }
 
     fun handleOperation(chatId: Long, text: String): BotApiMethod<out Serializable> {
+
+        OPERATIONS.contains(text)
+
         return if (OPERATIONS.contains(text)) {
             val operationStep = when (OperationType.valueOf(text)) {
                 OperationType.STUDIED -> studiedOperation.initOperation(chatId)
@@ -64,7 +67,6 @@ class OperationService(private val usersService: UsersService,
     }
 
     fun handleCallback(chatId: Long, messageId: Int, callData: String): BotApiMethod<out Serializable> {
-        operationData[chatId] = OperationPipeline(OperationType.NOTIFICATIONS, StudiedOperation.StudiedOperationStep.SELECT_GROUP, HashMap())
         val data = operationData[chatId]
         return if (data != null) {
             when (data.type) {
@@ -101,13 +103,6 @@ class OperationService(private val usersService: UsersService,
         keyboardMarkup.keyboard = rows
 
         return keyboardMarkup
-    }
-
-    private fun operationRunner(chatId: Long, operationType: OperationType): OperationStepInfo? {
-        return when (operationType) {
-            OperationType.STUDIED -> studiedOperation.initOperation(chatId)
-            OperationType.NOTIFICATIONS -> null
-        }
     }
 
     private fun notImplementMessage(chatId: Long): BotApiMethod<out Serializable> {
