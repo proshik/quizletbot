@@ -13,7 +13,7 @@ import java.time.ZonedDateTime
 class AuthenticationService(private val stateService: QuizletStateService,
                             private val quizletClient: QuizletClient,
                             private val usersRepository: UsersRepository,
-                            // TODO change an architecture of classes and remove @Lazy
+        // TODO change an architecture of classes and remove @Lazy
                             @Lazy private val telegramBotService: TelegramBotService) {
 
     companion object {
@@ -49,9 +49,15 @@ class AuthenticationService(private val stateService: QuizletStateService,
 //            throw RuntimeException("quizlet account for user with chatId=$chatId already exists")
 //        }
 
-        // create and save account for user
-        val account = Account(ZonedDateTime.now(), authorization.userId, authorization.accessToken)
-        user.account = account
+        if (user.account != null) {
+            // update access token for account
+            user.account.accessToken = authorization.accessToken
+        } else {
+            // create account
+            val account = Account(ZonedDateTime.now(), authorization.userId, authorization.accessToken)
+            user.account = account
+        }
+        // save or update an user
         usersRepository.save(user)
 
         // delete state from im-memory map with states
