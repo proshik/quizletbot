@@ -4,5 +4,4 @@ enum class OperationType {
 
     STUDIED,
     NOTIFICATIONS
-
 }

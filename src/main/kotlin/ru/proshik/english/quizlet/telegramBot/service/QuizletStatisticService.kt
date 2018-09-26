@@ -8,6 +8,16 @@ import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
 import ru.proshik.english.quizlet.telegramBot.service.model.*
 import ru.proshik.english.quizlet.telegramBot.service.model.ModeType.Companion.designationsByModeTypes
 
+data class StudiedModes(val mode: String,
+                        val startDate: Long,
+                        val finishDate: Long?,
+                        val formattedScore: String?)
+
+data class AccountInfo(val login: String,
+                       val accessToken: String)
+
+data class StatFilter(val groupIds: List<Long>?, val setIds: List<Long>?, val modes: List<ModeType>?)
+
 @Service
 class QuizletStatisticService(private val quizletClient: QuizletClient) {
 
