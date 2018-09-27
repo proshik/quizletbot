@@ -39,7 +39,9 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
             execute(response)
         } catch (e: TelegramApiException) {
             LOG.error("Panic! Messages not sending! Internal exception.", e)
-        } catch (e : Error){
+        } catch (e: NotImplementedError) {
+            LOG.error("not implement exception")
+        } catch (e: Error) {
             LOG.error("Panic! Messages not sending! Internal error", e)
         }
     }

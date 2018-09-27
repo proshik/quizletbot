@@ -26,7 +26,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
     data class ActiveStep(val stepType: StepType, val userGroups: List<UserGroupsResp>, val groupId: Long?)
 
-    data class OperationResult(val showedItem: Int, val statistics: Statistics)
+    data class OperationResult(val statistics: Statistics)
 
     private val stepStore = ConcurrentHashMap<Long, ActiveStep>()
 
@@ -85,8 +85,8 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 //        val (command, value) = callData.split(";")
 //
 //        when (command) {
-//            MessageFormatter.PAGING -> {}
-//            MessageFormatter.STEPPING -> {}
+//            MessageFormatter.PAGING_ELEMENT -> {}
+//            MessageFormatter.PAGING_BUTTONS -> {}
 //        }
         val activeStep = stepStore[chatId] ?: return StepResult(EditMessageText()
                 .setChatId(chatId)
@@ -107,7 +107,6 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         val (command, value) = callData.split(";")
 
         when (command) {
-            MessageFormatter.PAGING -> TODO()
             MessageFormatter.STEPPING -> {
                 val group = activeStep.userGroups.asSequence().filter { group -> group.id.toString() == value }.firstOrNull()
 
@@ -155,9 +154,9 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
         return when (command) {
             // paging by result
-            MessageFormatter.PAGING -> {
+            MessageFormatter.PAGING_ELEMENT -> {
                 val operationResult = operationResultStore[chatId]
-                        ?: throw RuntimeException("not available command=$command for step")
+                        ?: throw RuntimeException("not available command=\"$command\" for step")
 
 
                 val countOfItems = operationResult.statistics.setsStats.size
@@ -167,7 +166,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
                 val message = messageFormatter.navigateByItems(chatId, messageId, text, countOfItems, selectedItem)
 
-                operationResultStore[chatId] = OperationResult(value.toInt(), operationResult.statistics)
+                operationResultStore[chatId] = OperationResult(operationResult.statistics)
 
                 StepResult(message, true)
             }
@@ -202,13 +201,43 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
                 val statistics = quizletInfoService.buildStatistic(chatId, group.id, setIds, activeStep.userGroups)
 
-                operationResultStore[chatId] = OperationResult(1, statistics)
+                operationResultStore[chatId] = OperationResult(statistics)
 
                 val text = createMessageText(statistics.groupName, statistics.setsStats[0])
 
-                val message = messageFormatter.navigateByItems(chatId, messageId, text, statistics.setsStats.size, 1)
+                val message = messageFormatter.navigateByItems(chatId, messageId, text, statistics.setsStats.size)
 
                 StepResult(message, true)
+            }
+            MessageFormatter.PAGING_BUTTONS -> {
+                val iterableStep = stepStore[chatId]
+                if (iterableStep == null) {
+                    val message = EditMessageText()
+                            .setChatId(chatId)
+                            .setMessageId(messageId)
+                            .setText("Incorrect request. Saved step doesn't find")
+                            .setReplyMarkup(null)
+
+                    return StepResult(message, true)
+                }
+
+                val group = iterableStep.userGroups.asSequence()
+                        .filter { group -> group.id == iterableStep.groupId }
+                        .first()
+
+//                stepStore[chatId] = ActiveStep(SELECT_SET, activeStep.userGroups, group.id)
+
+                val text = StringBuilder("Group: *${group.name}*\n")
+                text.append("Select a set from group: ")
+
+                val items = group.sets.asSequence()
+//                        .sortedByDescending { set -> set.publishedDate }
+                        .map { it -> Pair(it.title, it.id.toString()) }.toList()
+
+                val message = messageFormatter.navigateBySteps(chatId, text.toString(), items, messageId,
+                        firstElemInGr = value.toInt(), pagingButton = true, showAllLine = true)
+
+                return StepResult(message, true)
             }
             else -> throw RuntimeException("unexpected callbackData=$callData")
         }
