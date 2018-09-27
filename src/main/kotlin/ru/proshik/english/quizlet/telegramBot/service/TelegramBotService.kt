@@ -11,13 +11,15 @@ import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.bots.AbsSender
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.meta.updateshandlers.SentCallback
+import ru.proshik.english.quizlet.telegramBot.service.operation.OperationService
 import java.io.Serializable
 
 @Component
 class TelegramBotService(@Value("\${telegram.token}") private val token: String,
                          @Value("\${telegram.username}") private val username: String,
                          defaultBotOptions: DefaultBotOptions,
-                         val quizletOperationService: QuizletOperationService) : TelegramLongPollingBot(defaultBotOptions) {
+                         val quizletOperationService: QuizletOperationService,
+                         val operationService: OperationService) : TelegramLongPollingBot(defaultBotOptions) {
 
     companion object {
 
@@ -67,7 +69,7 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
         val messageId = update.callbackQuery.message.messageId
         val callData = update.callbackQuery.data
 
-        return quizletOperationService.handleCallback(chatId, messageId, callData)
+        return operationService.handleCallback(chatId, messageId, callData)
     }
 
     private fun commandMessage(update: Update): BotApiMethod<out Serializable> {
@@ -85,7 +87,7 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
     }
 
     private fun operationMessage(update: Update): BotApiMethod<out Serializable> {
-        return quizletOperationService.handleCommand(update.message.chatId, update.message.text)
+        return operationService.handleOperation(update.message.chatId, update.message.text)
     }
 
 

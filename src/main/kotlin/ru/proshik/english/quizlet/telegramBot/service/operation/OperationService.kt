@@ -1,6 +1,7 @@
 package ru.proshik.english.quizlet.telegramBot.service.operation
 
 import org.apache.log4j.Logger
+import org.springframework.stereotype.Service
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup
@@ -12,6 +13,7 @@ import ru.proshik.english.quizlet.telegramBot.service.operation.OperationService
 import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
+@Service
 class OperationService(private val usersService: UsersService,
                        private val authenticationService: AuthenticationService,
                        private val studiedOperation: StudiedOperation,
@@ -24,9 +26,10 @@ class OperationService(private val usersService: UsersService,
         RECONNECT("/reconnect")
     }
 
-    enum class Operation {
-        STUDIED,
-        NOTIFICATIONS
+    enum class Operation(name: String) {
+        STUDIED("Statistics"),
+        NOTIFICATIONS("Notifications");
+
     }
 
     companion object {
@@ -93,7 +96,7 @@ class OperationService(private val usersService: UsersService,
                 STUDIED -> studiedOperation.navigate(chatId, messageId, callData)
                 NOTIFICATIONS -> studiedOperation.navigate(chatId, messageId, callData)
             }
-            if (finalStep) actionOperationStore.remove(chatId)
+//            if (finalStep) actionOperationStore.remove(chatId)
             message
         } else
             EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
