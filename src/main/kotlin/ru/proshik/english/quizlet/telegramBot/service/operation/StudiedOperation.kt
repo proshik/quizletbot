@@ -19,10 +19,6 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
     val messageFormatter = MessageFormatter()
 
-    companion object {
-        const val GROUP_ID = "group_id"
-    }
-
     enum class StepType {
         SELECT_GROUP,
         SELECT_SET
@@ -38,6 +34,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
     override fun init(chatId: Long): InitResult {
         stepStore.remove(chatId)
+        operationResultStore.remove(chatId)
 
         val userGroups = quizletInfoService.userGroups(chatId)
 
@@ -59,7 +56,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                 groupId = userGroups[0].id
                 stepType = SELECT_SET
                 outputData = userGroups[0].sets.asSequence()
-                        .sortedByDescending { set -> set.publishedDate }
+//                        .sortedByDescending { set -> set.publishedDate }
                         .map { set -> Pair(set.title, set.id.toString()) }
                         .toList()
             }
@@ -83,6 +80,8 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
     override fun navigate(chatId: Long,
                           messageId: Int,
                           callData: String): StepResult {
+
+//        val (command, value) = callData.split(";")
 
         val activeStep = stepStore[chatId]
                 ?: return StepResult(EditMessageText()
@@ -118,7 +117,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                 }
 
                 val items = group.sets.asSequence()
-                        .sortedByDescending { set -> set.publishedDate }
+//                        .sortedByDescending { set -> set.publishedDate }
                         .map { it -> Pair(it.title, it.id.toString()) }.toList()
 
                 if (items.isEmpty()) {
@@ -155,10 +154,12 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                 val operationResult = operationResultStore[chatId]
                         ?: throw RuntimeException("not available command=$command for step")
 
-                val text = createMessageText(operationResult.statistics.groupName, operationResult.statistics.setsStats[operationResult.showedItem - 1])
 
                 val countOfItems = operationResult.statistics.setsStats.size
                 val selectedItem = value.toInt()
+
+                val text = createMessageText(operationResult.statistics.groupName, operationResult.statistics.setsStats[selectedItem-1])
+
                 val message = messageFormatter.naviga1teByItems(chatId, messageId, text, countOfItems, selectedItem)
 
                 operationResultStore[chatId] = OperationResult(value.toInt(), operationResult.statistics)
@@ -218,12 +219,20 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         for (mode in ModeType.values()) {
             if (modeStatByMode.containsKey(mode)) {
                 val modeStat = modeStatByMode[mode]
+                if (modeStat == null || modeStat.isEmpty()) {
+                    res.append("${mode.title} (*-*)\n")
+                    continue
+                }
 
-                val valueStat = if (modeStat?.last()?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
+                val lastModeStat = modeStat.asSequence().filter { it.finishDate != null }.sortedByDescending { it.finishDate }.firstOrNull()
+
+                val valueStat = if (lastModeStat?.finishDate != null) "*finished* [${modeStat.size}]" else "started"
                 res.append("_${mode.title}_ ($valueStat) ")
 
                 // TODO handle it beautifully
-                //                    if (modeStat?.formattedScore != null) res.append(" ${modeStat.formattedScore}")
+                if (lastModeStat != null) {
+                    if (lastModeStat.formattedScore != null) res.append(" ${lastModeStat.formattedScore}")
+                }
 
                 res.append("\n")
             } else {
