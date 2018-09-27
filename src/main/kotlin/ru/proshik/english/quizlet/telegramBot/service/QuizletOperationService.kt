@@ -79,7 +79,8 @@ class QuizletOperationService(private val usersService: UsersService,
 
                     if (items.isEmpty()) {
                         commandQueue.remove(chatId)
-                        return SendMessage().setChatId(chatId).setText("Doesn't find not one set for ${group.name}")
+                        return SendMessage().setChatId(chatId)
+                                .setText("Doesn't find not one set for ${group.name}")
                                 .setReplyMarkup(buildDefaultKeyboard())
                     }
 
