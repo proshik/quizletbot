@@ -9,7 +9,8 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import ru.proshik.english.quizlet.telegramBot.service.AuthenticationService
 import ru.proshik.english.quizlet.telegramBot.service.UsersService
-import ru.proshik.english.quizlet.telegramBot.service.operation.OperationService.Operation.*
+import ru.proshik.english.quizlet.telegramBot.service.operation.OperationService.OperationType.NOTIFICATIONS
+import ru.proshik.english.quizlet.telegramBot.service.operation.OperationService.OperationType.STUDIED
 import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
@@ -19,39 +20,38 @@ class OperationService(private val usersService: UsersService,
                        private val studiedOperation: StudiedOperation,
                        private val notificationOperation: NotificationOperation) {
 
-    enum class Command(name: String) {
+    enum class CommandType(name: String) {
         START("/start"),
         HELP("/help"),
         CONNECT("/connect"),
         RECONNECT("/reconnect")
     }
 
-    enum class Operation(name: String) {
-        STUDIED("Statistics"),
+    enum class OperationType(val title: String) {
+        STUDIED("Studied"),
         NOTIFICATIONS("Notifications");
-
     }
 
     companion object {
 
         private val LOG = Logger.getLogger(OperationService::class.java)
 
-        private val OPERATIONS = values().toList().map { operation -> operation.name }.toList()
+        private val OPERATIONS = OperationType.values().toList().map { operation -> operation.title }.toList()
 
         private const val DEFAULT_MESSAGE = "This bot can help you get information about studied sets on quizlet.com"
     }
 
 
-    data class ActionOperation(val operation: Operation, val messageId: Int? = null)
+    data class ActionOperation(val operation: OperationType, val messageId: Int? = null)
 
     private val actionOperationStore = ConcurrentHashMap<Long, ActionOperation>()
 
-    fun handleCommand(chatId: Long, command: Command): BotApiMethod<out Serializable> {
-        return when (command) {
-            Command.START -> SendMessage().setChatId(chatId).setText(DEFAULT_MESSAGE)
-            Command.HELP -> SendMessage().setChatId(chatId).setText(DEFAULT_MESSAGE)
-            Command.CONNECT -> SendMessage().setChatId(chatId).setText(connectToQuizlet(chatId))
-            Command.RECONNECT -> SendMessage().setChatId(chatId).setText(authenticationService.generateAuthUrl(chatId.toString()))
+    fun handleCommand(chatId: Long, commandType: CommandType): BotApiMethod<out Serializable> {
+        return when (commandType) {
+            CommandType.START -> SendMessage().setChatId(chatId).setText(DEFAULT_MESSAGE)
+            CommandType.HELP -> SendMessage().setChatId(chatId).setText(DEFAULT_MESSAGE)
+            CommandType.CONNECT -> SendMessage().setChatId(chatId).setText(connectToQuizlet(chatId))
+            CommandType.RECONNECT -> SendMessage().setChatId(chatId).setText(authenticationService.generateAuthUrl(chatId.toString()))
         }
     }
 
@@ -70,7 +70,8 @@ class OperationService(private val usersService: UsersService,
         }
 
         // text message is operation
-        return when (valueOf(text)) {
+        //TODO replace toUpperCase on valuesOf() for enums
+        return when (OperationType.valueOf(text.toUpperCase())) {
             STUDIED -> {
                 val (message, existData) = studiedOperation.init(chatId)
 

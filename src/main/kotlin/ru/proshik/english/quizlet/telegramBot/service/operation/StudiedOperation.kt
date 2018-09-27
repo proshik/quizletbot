@@ -81,14 +81,18 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                           messageId: Int,
                           callData: String): StepResult {
 
+        // todo finish that
 //        val (command, value) = callData.split(";")
-
-        val activeStep = stepStore[chatId]
-                ?: return StepResult(EditMessageText()
-                        .setChatId(chatId)
-                        .setMessageId(messageId)
-                        .setText("Unexpected transition")
-                        .setReplyMarkup(null), true)
+//
+//        when (command) {
+//            MessageFormatter.PAGING -> {}
+//            MessageFormatter.STEPPING -> {}
+//        }
+        val activeStep = stepStore[chatId] ?: return StepResult(EditMessageText()
+                .setChatId(chatId)
+                .setMessageId(messageId)
+                .setText("Unexpected transition")
+                .setReplyMarkup(null), true)
 
         return when (activeStep.stepType) {
             SELECT_GROUP -> handleSelectGroup(chatId, messageId, callData, activeStep)
@@ -103,8 +107,8 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         val (command, value) = callData.split(";")
 
         when (command) {
-            MessageFormatter.NAVIGATION -> TODO()
-            MessageFormatter.ELEMENT -> {
+            MessageFormatter.PAGING -> TODO()
+            MessageFormatter.STEPPING -> {
                 val group = activeStep.userGroups.asSequence().filter { group -> group.id.toString() == value }.firstOrNull()
 
                 if (group == null) {
@@ -150,7 +154,8 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         val (command, value) = callData.split(";")
 
         return when (command) {
-            MessageFormatter.NAVIGATION -> {
+            // paging by result
+            MessageFormatter.PAGING -> {
                 val operationResult = operationResultStore[chatId]
                         ?: throw RuntimeException("not available command=$command for step")
 
@@ -158,15 +163,16 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                 val countOfItems = operationResult.statistics.setsStats.size
                 val selectedItem = value.toInt()
 
-                val text = createMessageText(operationResult.statistics.groupName, operationResult.statistics.setsStats[selectedItem-1])
+                val text = createMessageText(operationResult.statistics.groupName, operationResult.statistics.setsStats[selectedItem - 1])
 
-                val message = messageFormatter.naviga1teByItems(chatId, messageId, text, countOfItems, selectedItem)
+                val message = messageFormatter.navigateByItems(chatId, messageId, text, countOfItems, selectedItem)
 
                 operationResultStore[chatId] = OperationResult(value.toInt(), operationResult.statistics)
 
                 StepResult(message, true)
             }
-            MessageFormatter.ELEMENT -> {
+            // select next step or another varieties of elements
+            MessageFormatter.STEPPING -> {
                 if (operationResultStore[chatId] != null) {
                     operationResultStore.remove(chatId)
                 }
@@ -200,7 +206,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
                 val text = createMessageText(statistics.groupName, statistics.setsStats[0])
 
-                val message = messageFormatter.naviga1teByItems(chatId, messageId, text, statistics.setsStats.size)
+                val message = messageFormatter.navigateByItems(chatId, messageId, text, statistics.setsStats.size, 1)
 
                 StepResult(message, true)
             }

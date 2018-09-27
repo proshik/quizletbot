@@ -10,9 +10,10 @@ import java.io.Serializable
 
 class MessageFormatter {
 
+    // todo replace constants to enums
     companion object {
-        const val NAVIGATION = "nav"
-        const val ELEMENT = "elem"
+        const val PAGING = "page"
+        const val STEPPING = "element_id"
 
         const val ALL_ITEMS = "-1"
     }
@@ -70,7 +71,7 @@ class MessageFormatter {
         return keyboard
     }
 
-
+    //TODO finish the implementation of paging for buttons
     fun navigateBySteps(chatId: Long,
                         messageText: String,
                         items: List<Pair<String, String>>,
@@ -84,7 +85,7 @@ class MessageFormatter {
         if (itemInRow < 1) throw IllegalArgumentException("unexpectable value itemInRow=$itemInRow")
 
         // calculate value of items on one line
-        //TODO fix bug
+        //TODO fix it. Need to implement a code for more then one element on the line
         val countItemOnLine = 1
 //                if (itemInRow != 1 && items.size > itemInRow) itemInRow else items.size
         // initialize rows
@@ -92,7 +93,7 @@ class MessageFormatter {
         // check and add the first line with a title "All items"
         if (showAllLine && items.size > 1) {
             val allElementRow = ArrayList<InlineKeyboardButton>()
-            allElementRow.add(InlineKeyboardButton().setText("All items").setCallbackData("$ELEMENT;$ALL_ITEMS"))
+            allElementRow.add(InlineKeyboardButton().setText("All items").setCallbackData("$STEPPING;$ALL_ITEMS"))
             rows.add(allElementRow)
         }
 
@@ -100,7 +101,7 @@ class MessageFormatter {
         var i = 1
         var itemRows = ArrayList<InlineKeyboardButton>()
         for (item in items) {
-            itemRows.add(InlineKeyboardButton().setText(item.first).setCallbackData("$ELEMENT;${item.second}"))
+            itemRows.add(InlineKeyboardButton().setText(item.first).setCallbackData("$STEPPING;${item.second}"))
 
             if (i % countItemOnLine == 0) {
                 rows.add(itemRows)
@@ -139,71 +140,14 @@ class MessageFormatter {
                     .setReplyMarkup(keyboard)
     }
 
-    fun naviga1teByItems(chatId: Long,
-                         messageId: Int,
-                         text: String,
-                         countOfItems: Int,
-                         selectedItem: Int = 1): BotApiMethod<out Serializable> {
-
-        // check input params
-//        if (countOfItems) throw IllegalArgumentException("unexpectable count of values items=${countOfItems}")
-
-        // initialize rows
-        val rows = ArrayList<List<InlineKeyboardButton>>()
-
-        // build keyboards
-        val numberRow = ArrayList<InlineKeyboardButton>()
+    fun navigateByItems(chatId: Long,
+                        messageId: Int,
+                        text: String,
+                        countOfItems: Int,
+                        selectedItem: Int): BotApiMethod<out Serializable> {
 
 
-        if (countOfItems > 5) {
-            if (selectedItem > 3 && selectedItem < (countOfItems - 2)) {
-                numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$NAVIGATION;1"))
-                numberRow.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$NAVIGATION;${selectedItem - 1}"))
-                numberRow.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$NAVIGATION;$selectedItem"))
-                numberRow.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$NAVIGATION;${selectedItem + 1}"))
-                numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$NAVIGATION;$countOfItems"))
-            } else {
-                if (selectedItem < 4) {
-                    if (selectedItem == 1) {
-                        numberRow.add(InlineKeyboardButton().setText("·1·").setCallbackData("$NAVIGATION;1"))
-                    } else {
-                        numberRow.add(InlineKeyboardButton().setText("1").setCallbackData("$NAVIGATION;1"))
-                    }
-                    for (item in 2..4) {
-                        if (selectedItem == item) {
-                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$NAVIGATION;$item"))
-                        } else {
-                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$NAVIGATION;$item"))
-                        }
-                    }
-                    numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$NAVIGATION;$countOfItems"))
-                } else  {
-                    numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$NAVIGATION;1"))
-                    for (item in countOfItems - 3 until countOfItems) {
-                        if (selectedItem == item) {
-                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$NAVIGATION;$item"))
-                        } else {
-                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$NAVIGATION;$item"))
-                        }
-                    }
-                    if (selectedItem == countOfItems) {
-                        numberRow.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$NAVIGATION;$countOfItems"))
-                    } else {
-                        numberRow.add(InlineKeyboardButton().setText("$countOfItems").setCallbackData("$NAVIGATION;$countOfItems"))
-                    }
-                }
-            }
-        } else {
-            for (item in 1..countOfItems) {
-                val title = if (selectedItem == item) "·$item·" else "$item"
-                numberRow.add(InlineKeyboardButton().setText(title).setCallbackData("$NAVIGATION;$item"))
-            }
-        }
-
-        rows.add(numberRow)
-
-        val keyboard = InlineKeyboardMarkup()
-        keyboard.keyboard = rows
+        val keyboard = if (countOfItems > 1) buildIInlanePaigingKeyboard(countOfItems, selectedItem) else null
 
         return EditMessageText()
                 .setChatId(chatId)
@@ -213,7 +157,67 @@ class MessageFormatter {
                 .enableMarkdown(true)
     }
 
-    //TODO old implementation
+    private fun buildIInlanePaigingKeyboard(countOfItems: Int, selectedItem: Int): InlineKeyboardMarkup {
+        val keyboard = InlineKeyboardMarkup()
+
+        // initialize rows
+        val rows = ArrayList<List<InlineKeyboardButton>>()
+
+        // build keyboards
+        val numberRow = ArrayList<InlineKeyboardButton>()
+
+        if (countOfItems > 5) {
+            if (selectedItem > 3 && selectedItem < (countOfItems - 2)) {
+                numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$PAGING;1"))
+                numberRow.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$PAGING;${selectedItem - 1}"))
+                numberRow.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$PAGING;$selectedItem"))
+                numberRow.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$PAGING;${selectedItem + 1}"))
+                numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$PAGING;$countOfItems"))
+            } else {
+                if (selectedItem < 4) {
+                    if (selectedItem == 1) {
+                        numberRow.add(InlineKeyboardButton().setText("·1·").setCallbackData("$PAGING;1"))
+                    } else {
+                        numberRow.add(InlineKeyboardButton().setText("1").setCallbackData("$PAGING;1"))
+                    }
+                    for (item in 2..4) {
+                        if (selectedItem == item) {
+                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$PAGING;$item"))
+                        } else {
+                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$PAGING;$item"))
+                        }
+                    }
+                    numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$PAGING;$countOfItems"))
+                } else {
+                    numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$PAGING;1"))
+                    for (item in countOfItems - 3 until countOfItems) {
+                        if (selectedItem == item) {
+                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$PAGING;$item"))
+                        } else {
+                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$PAGING;$item"))
+                        }
+                    }
+                    if (selectedItem == countOfItems) {
+                        numberRow.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$PAGING;$countOfItems"))
+                    } else {
+                        numberRow.add(InlineKeyboardButton().setText("$countOfItems").setCallbackData("$PAGING;$countOfItems"))
+                    }
+                }
+            }
+        } else {
+            for (item in 1..countOfItems) {
+                val title = if (selectedItem == item) "·$item·" else "$item"
+                numberRow.add(InlineKeyboardButton().setText(title).setCallbackData("$PAGING;$item"))
+            }
+        }
+
+        rows.add(numberRow)
+
+        keyboard.keyboard = rows
+        return keyboard
+    }
+
+    //TODO old implementation. Remove it
     fun formatStep(chatId: Long, items: List<String>,
                    all: Boolean = false,
                    new: Boolean = false,
