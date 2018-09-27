@@ -78,10 +78,12 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                           messageId: Int,
                           callData: String): StepResult {
 
+        if (callData == null){
+
+        }
+
         val activeStep = stepStore[chatId]
                 ?: return StepResult(SendMessage().setChatId(chatId).setText("unexpected transition"), true)
-
-//        val (comand, value) = callData.split(";")
 
         return when (activeStep.stepType) {
             SELECT_GROUP -> {
@@ -99,11 +101,11 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         when (command) {
             MessageFormatter.NAVIGATION -> TODO()
             MessageFormatter.ELEMENT -> {
-                val group = activeStep.userGroups.asSequence().filter { group -> group.name == value }.firstOrNull()
+                val group = activeStep.userGroups.asSequence().filter { group -> group.id.toString() == value }.firstOrNull()
 
                 if (group == null) {
                     stepStore.remove(chatId)
-                    return StepResult(SendMessage().setChatId(chatId).setText("Doesn't find group for $value"), true)
+                    return StepResult(SendMessage().setChatId(chatId).setText("Doesn't find roup for $value"), true)
 //                            .setReplyMarkup(buildDefaultKeyboard())
                 }
 

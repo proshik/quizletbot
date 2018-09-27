@@ -84,7 +84,9 @@ class MessageFormatter {
         if (itemInRow < 1) throw IllegalArgumentException("unexpectable value itemInRow=$itemInRow")
 
         // calculate value of items on one line
-        val countItemOnLine = if (itemInRow != 1 && items.size > itemInRow) itemInRow else items.size
+        //TODO fix bug
+        val countItemOnLine = 1
+//                if (itemInRow != 1 && items.size > itemInRow) itemInRow else items.size
         // initialize rows
         val rows = ArrayList<List<InlineKeyboardButton>>()
         // check and add the first line with a title "All items"
@@ -122,7 +124,7 @@ class MessageFormatter {
         val keyboard = InlineKeyboardMarkup()
         keyboard.keyboard = rows
 
-        return if (messageId != null)
+        return if (messageId == null)
             SendMessage()
                     .setChatId(chatId)
                     .setText(messageText)
@@ -152,14 +154,14 @@ class MessageFormatter {
         // build keyboards
         val numberRow = ArrayList<InlineKeyboardButton>()
         if (countOfItems > 5) {
-            if (selectedItem > 2 && selectedItem < countOfItems - 2) {
+            if (selectedItem > 2 && selectedItem < (countOfItems - 2)) {
                 numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData(1.toString()))
                 numberRow.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$NAVIGATION;${selectedItem - 1}"))
                 numberRow.add(InlineKeyboardButton().setText(".$selectedItem.").setCallbackData("$NAVIGATION;$selectedItem"))
                 numberRow.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$NAVIGATION;${selectedItem + 1}"))
-                numberRow.add(InlineKeyboardButton().setText("${countOfItems}>>").setCallbackData(countOfItems.toString()))
+                numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData(countOfItems.toString()))
             } else {
-                numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData(1.toString()))
+                numberRow.add(InlineKeyboardButton().setText("1").setCallbackData(1.toString()))
                 for (item in selectedItem - 1..selectedItem + 1) {
                     val title = if (item == selectedItem) ".$item." else item.toString()
                     numberRow.add(InlineKeyboardButton().setText(title).setCallbackData("$NAVIGATION;$item"))
@@ -183,6 +185,7 @@ class MessageFormatter {
                 .setMessageId(messageId)
                 .setText(text)
                 .setReplyMarkup(keyboard)
+                .enableMarkdown(true)
     }
 
     //TODO old implementation
