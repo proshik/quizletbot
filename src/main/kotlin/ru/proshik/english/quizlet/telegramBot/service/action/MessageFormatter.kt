@@ -140,10 +140,10 @@ class MessageFormatter {
     }
 
     fun naviga1teByItems(chatId: Long,
-                        messageId: Int,
-                        text: String,
-                        countOfItems: Int,
-                        selectedItem: Int = 1): BotApiMethod<out Serializable> {
+                         messageId: Int,
+                         text: String,
+                         countOfItems: Int,
+                         selectedItem: Int = 1): BotApiMethod<out Serializable> {
 
         // check input params
 //        if (countOfItems) throw IllegalArgumentException("unexpectable count of values items=${countOfItems}")
@@ -155,45 +155,43 @@ class MessageFormatter {
         val numberRow = ArrayList<InlineKeyboardButton>()
 
 
-       if (countOfItems > 5) {
-            if (selectedItem > 3 && selectedItem < (countOfItems - 3)) {
+        if (countOfItems > 5) {
+            if (selectedItem > 3 && selectedItem < (countOfItems - 2)) {
                 numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$NAVIGATION;1"))
                 numberRow.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$NAVIGATION;${selectedItem - 1}"))
                 numberRow.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$NAVIGATION;$selectedItem"))
                 numberRow.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$NAVIGATION;${selectedItem + 1}"))
                 numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$NAVIGATION;$countOfItems"))
             } else {
-                for (item in 1..5) {
-                    if (item == 1) {
-                        if (item == selectedItem) {
-                            numberRow.add(InlineKeyboardButton().setText("·1·").setCallbackData("$NAVIGATION;1"))
-                        } else if (selectedItem > 3){
-                            numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$NAVIGATION;1"))
-                        } else {
-                            numberRow.add(InlineKeyboardButton().setText("1").setCallbackData("$NAVIGATION;1"))
-                        }
-                    } else if (item == 5) {
-                        if (item == selectedItem) {
-                            numberRow.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$NAVIGATION;$countOfItems"))
-                        } else if (selectedItem < (countOfItems - 3)){
-                            numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$NAVIGATION;$countOfItems"))
-                        } else {
-                            numberRow.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$NAVIGATION;$countOfItems"))
-                        }
+                if (selectedItem < 4) {
+                    if (selectedItem == 1) {
+                        numberRow.add(InlineKeyboardButton().setText("·1·").setCallbackData("$NAVIGATION;1"))
                     } else {
-                        if (item == selectedItem) {
+                        numberRow.add(InlineKeyboardButton().setText("1").setCallbackData("$NAVIGATION;1"))
+                    }
+                    for (item in 2..4) {
+                        if (selectedItem == item) {
                             numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$NAVIGATION;$item"))
                         } else {
                             numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$NAVIGATION;$item"))
                         }
                     }
+                    numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$NAVIGATION;$countOfItems"))
+                } else  {
+                    numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$NAVIGATION;1"))
+                    for (item in countOfItems - 3 until countOfItems) {
+                        if (selectedItem == item) {
+                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$NAVIGATION;$item"))
+                        } else {
+                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$NAVIGATION;$item"))
+                        }
+                    }
+                    if (selectedItem == countOfItems) {
+                        numberRow.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$NAVIGATION;$countOfItems"))
+                    } else {
+                        numberRow.add(InlineKeyboardButton().setText("$countOfItems").setCallbackData("$NAVIGATION;$countOfItems"))
+                    }
                 }
-//                numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$NAVIGATION;1"))
-//                for (item in selectedItem - 1..selectedItem + 1) {
-//                    val title = if (item == selectedItem) ".$item." else item.toString()
-//                    numberRow.add(InlineKeyboardButton().setText(title).setCallbackData("$NAVIGATION;$item"))
-//                }
-//                numberRow.add(InlineKeyboardButton().setText("${countOfItems}>>").setCallbackData("$NAVIGATION;$countOfItems"))
             }
         } else {
             for (item in 1..countOfItems) {
