@@ -5,8 +5,10 @@ import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.dto.SetResp
 import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
-import ru.proshik.english.quizlet.telegramBot.service.model.*
+import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
 import ru.proshik.english.quizlet.telegramBot.service.model.ModeType.Companion.designationsByModeTypes
+
+//TODO the file for remove
 
 data class StudiedModes(val mode: String,
                         val startDate: Long,

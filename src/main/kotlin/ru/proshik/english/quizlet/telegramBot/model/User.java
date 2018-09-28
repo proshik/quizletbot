@@ -23,7 +23,7 @@ public class User {
     private ZonedDateTime createdDate;
 
     @Column(name = "chat_id", nullable = false)
-    private String chatId;
+    private Long chatId;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private Account account;
@@ -31,12 +31,12 @@ public class User {
     public User() {
     }
 
-    public User(ZonedDateTime createdDate, String chatId) {
+    public User(ZonedDateTime createdDate, Long chatId) {
         this.createdDate = createdDate;
         this.chatId = chatId;
     }
 
-    public User(ZonedDateTime createdDate, String chatId, Account account) {
+    public User(ZonedDateTime createdDate, Long chatId, Account account) {
         this.createdDate = createdDate;
         this.chatId = chatId;
         this.account = account;
@@ -50,7 +50,7 @@ public class User {
         return createdDate;
     }
 
-    public String getChatId() {
+    public Long getChatId() {
         return chatId;
     }
 

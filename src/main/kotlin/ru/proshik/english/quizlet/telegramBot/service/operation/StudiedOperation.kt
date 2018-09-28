@@ -4,12 +4,11 @@ import org.springframework.stereotype.Component
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
-import ru.proshik.english.quizlet.telegramBot.service.QuizletInfoService
-import ru.proshik.english.quizlet.telegramBot.service.action.MessageFormatter
-import ru.proshik.english.quizlet.telegramBot.service.action.MessageFormatter.Companion.ALL_ITEMS
+import ru.proshik.english.quizlet.telegramBot.service.*
+import ru.proshik.english.quizlet.telegramBot.service.MessageFormatter.Companion.ALL_ITEMS
 import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
 import ru.proshik.english.quizlet.telegramBot.service.model.SetStat
-import ru.proshik.english.quizlet.telegramBot.service.model.Statistics
+import ru.proshik.english.quizlet.telegramBot.service.model.Studied
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SELECT_GROUP
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SELECT_SET
 import java.util.concurrent.ConcurrentHashMap
@@ -26,7 +25,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
     data class ActiveStep(val stepType: StepType, val userGroups: List<UserGroupsResp>, val groupId: Long?)
 
-    data class OperationResult(val statistics: Statistics)
+    data class OperationResult(val studied: Studied)
 
     private val stepStore = ConcurrentHashMap<Long, ActiveStep>()
 
@@ -140,7 +139,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
                 val message = messageFormatter.navigateBySteps(chatId, text.toString(), items, messageId, showAllLine = true)
 
-                // need to remove a previous statistics result
+                // need to remove a previous studied result
                 operationResultStore.remove(chatId)
 
                 return StepResult(message, false)
@@ -159,14 +158,14 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                         ?: throw RuntimeException("not available command=\"$command\" for step")
 
 
-                val countOfItems = operationResult.statistics.setsStats.size
+                val countOfItems = operationResult.studied.setsStats.size
                 val selectedItem = value.toInt()
 
-                val text = createMessageText(operationResult.statistics.groupName, operationResult.statistics.setsStats[selectedItem - 1])
+                val text = createMessageText(operationResult.studied.groupName, operationResult.studied.setsStats[selectedItem - 1])
 
                 val message = messageFormatter.navigateByItems(chatId, messageId, text, countOfItems, selectedItem)
 
-                operationResultStore[chatId] = OperationResult(operationResult.statistics)
+                operationResultStore[chatId] = OperationResult(operationResult.studied)
 
                 StepResult(message, true)
             }

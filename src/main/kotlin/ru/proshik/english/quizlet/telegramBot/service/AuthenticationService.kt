@@ -6,13 +6,13 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.model.Account
-import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
+import ru.proshik.english.quizlet.telegramBot.model.User
 import java.time.ZonedDateTime
 
 @Service
 class AuthenticationService(private val stateService: QuizletStateService,
                             private val quizletClient: QuizletClient,
-                            private val usersRepository: UsersRepository,
+                            private val usersService: UsersService,
         // TODO change an architecture of classes and remove @Lazy
                             @Lazy private val telegramBotService: TelegramBotService) {
 
@@ -42,12 +42,8 @@ class AuthenticationService(private val stateService: QuizletStateService,
 
         // save access_token to DB
         // TODO fix orElseThrow
-        val user = usersRepository.findByChatId(chatId) ?: throw RuntimeException("user doesn't find")
+        val user = usersService.getUser(chatId) ?: throw RuntimeException("user doesn't find")
         //                .orElseThrow { RuntimeException("user doesn't find") }
-        // TODO try inside telegram bot. It were write because generated an exception on duplicate login in the account table
-//        if (user.account != null) {
-//            throw RuntimeException("quizlet account for user with chatId=$chatId already exists")
-//        }
 
         if (user.account != null) {
             // update access token for account
@@ -58,7 +54,7 @@ class AuthenticationService(private val stateService: QuizletStateService,
             user.account = account
         }
         // save or update an user
-        usersRepository.save(user)
+        usersService.createUser(user)
 
         // delete state from im-memory map with states
         stateService.delete(state)
@@ -67,7 +63,16 @@ class AuthenticationService(private val stateService: QuizletStateService,
         telegramBotService.sendAuthConfirmationMessage(user.chatId, user.account.login)
     }
 
-    fun generateAuthUrl(chatId: String): String {
+    fun connectToQuizlet(chatId: Long): String {
+        val user = usersService.getUser(chatId)
+        if (user == null) {
+            usersService.createUser(User(ZonedDateTime.now(), chatId))
+        }
+
+        return generateAuthUrl(chatId)
+    }
+
+    private fun generateAuthUrl(chatId: Long): String {
         val state = stateService.add(chatId)
         return buildAuthUrl(state)
     }

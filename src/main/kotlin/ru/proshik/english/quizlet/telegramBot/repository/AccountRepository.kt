@@ -10,5 +10,6 @@ import ru.proshik.english.quizlet.telegramBot.model.Account
 interface AccountRepository : JpaRepository<Account, Long> {
 
     @Query(value = "select a from Account a join fetch a.user u where u.chatId = :chatId")
-    fun findAccessTokenByUserChatId(@Param("chatId") chatId: String): Account
+    fun findAccountByUserChatId(@Param("chatId") chatId: Long): Account?
+
 }

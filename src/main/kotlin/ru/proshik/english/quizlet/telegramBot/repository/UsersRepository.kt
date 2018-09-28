@@ -10,5 +10,5 @@ import ru.proshik.english.quizlet.telegramBot.model.User
 interface UsersRepository : JpaRepository<User, Long> {
 
     @Query(value = "select u from User u left join fetch u.account where u.chatId = :chatId")
-    fun findByChatId(@Param("chatId") chatId: String): User?
+    fun findByChatId(@Param("chatId") chatId: Long): User?
 }
