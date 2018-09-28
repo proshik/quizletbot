@@ -5,27 +5,29 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.DefaultBotOptions
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import org.telegram.telegrambots.meta.api.methods.ActionType
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
+import org.telegram.telegrambots.meta.api.methods.send.SendChatAction
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMarkup
+import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import org.telegram.telegrambots.meta.bots.AbsSender
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.meta.updateshandlers.SentCallback
-import ru.proshik.english.quizlet.telegramBot.service.operation.OperationService
+import ru.proshik.english.quizlet.telegramBot.service.operation.BotOperationService
 import java.io.Serializable
 
 @Component
 class TelegramBotService(@Value("\${telegram.token}") private val token: String,
                          @Value("\${telegram.username}") private val username: String,
                          defaultBotOptions: DefaultBotOptions,
-                         val quizletOperationService: QuizletOperationService,
-                         val operationService: OperationService) : TelegramLongPollingBot(defaultBotOptions) {
+                         val botOperationService: BotOperationService,
+                         val botCommandService: BotCommandService) : TelegramLongPollingBot(defaultBotOptions) {
 
     companion object {
 
         private val LOG = Logger.getLogger(TelegramBotService::class.java)
-
-        private const val DEFAULT_MESSAGE = "This bot can help you get information about studied sets on quizlet.com"
     }
 
     @Suppress("EXTENSION_SHADOWED_BY_MEMBER")
@@ -57,76 +59,41 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
     fun onWebHookUpdateReceived(update: Update): BotApiMethod<out Serializable> = when {
         update.hasMessage() -> message(update)
         update.hasCallbackQuery() -> callback(update)
-        update.hasEditedMessage() -> SendMessage().setChatId(update.message.chatId).setText("doesn't support operation. The edited Message")
+        update.hasEditedMessage() -> SendMessage().setChatId(update.message.chatId).setText("Operaotion doesn't support. The edited Message")
         else -> SendMessage().setChatId(update.message.chatId).setText("unexpected operation")
     }
 
-    private fun message(update: Update): BotApiMethod<out Serializable> = when {
-        update.message.isCommand -> commandMessage(update)
-        update.message.isReply -> SendMessage().setChatId(update.message.chatId).setText("isReply")
-        update.message.isUserMessage -> operationMessage(update)
-        else -> SendMessage().setChatId(update.message.chatId).setText("unexpected type of message")
-    }
+    private fun message(update: Update): BotApiMethod<out Serializable> {
+        val chatAction = SendChatAction().setChatId(update.message.chatId).setAction(ActionType.TYPING)
+        sendMessage(chatAction)
 
-    private fun callback(update: Update): BotApiMethod<out Serializable> {
-        val chatId = update.callbackQuery.message.chatId!!
-        val messageId = update.callbackQuery.message.messageId
-        val callData = update.callbackQuery.data
-
-        return operationService.handleCallback(chatId, messageId, callData)
-    }
-
-    private fun commandMessage(update: Update): BotApiMethod<out Serializable> {
-        return when (update.message.text.split(" ")[0]) {
-            "/start" -> SendMessage().setChatId(update.message?.chatId).setText(DEFAULT_MESSAGE)
-            "/help" -> SendMessage().setChatId(update.message?.chatId).setText(DEFAULT_MESSAGE)
-            "/connect" -> {
-                val chatId = update.message.chatId
-                val quizletConnectUrl = quizletOperationService.connectToQuizlet(chatId)
-
-                SendMessage().setChatId(update.message?.chatId).setText(quizletConnectUrl)
-            }
-            else -> throw RuntimeException("Unexpected command")
+        return when {
+            update.message.isCommand -> commandMessage(update)
+            //TODO remove or use this type of messages
+            update.message.isReply -> SendMessage().setChatId(update.message.chatId).setText("isReply")
+            update.message.isUserMessage -> operationMessage(update)
+            else -> SendMessage().setChatId(update.message.chatId).setText("unexpected type of message")
         }
     }
 
-    private fun operationMessage(update: Update): BotApiMethod<out Serializable> {
-        return operationService.handleOperation(update.message.chatId, update.message.text)
+    private fun callback(update: Update): BotApiMethod<out Serializable> {
+        val chatId = update.callbackQuery.message.chatId
+        val messageId = update.callbackQuery.message.messageId
+        val callData = update.callbackQuery.data
+
+        val chatAction = SendChatAction().setChatId(chatId).setAction(ActionType.TYPING)
+        sendMessage(chatAction)
+
+        return botOperationService.handleCallback(chatId, messageId, callData)
     }
 
+    private fun commandMessage(update: Update): BotApiMethod<out Serializable> {
+        return botCommandService.handleCommand(update.message.chatId, update.message.text)
+    }
 
-//    fun sendCustomKeyboard(update: Update): BotApiMethod<out Serializable> {
-//        val message = SendMessage()
-//        message.chatId = update.message.chatId.toString()
-//        message.text = "To send text messages, please use the keyboard provided or the commands /start and /help."
-//
-//        // Create ReplyKeyboardMarkup object
-//        val keyboardMarkup = ReplyKeyboardMarkup()
-//
-//        // Create the keyboard (list of keyboard rows)
-//        val rows = ArrayList<KeyboardRow>()
-//
-//        // Set each button, you can also use KeyboardButton objects if you need something else than text
-//        val statistics = KeyboardRow()
-//        statistics.add("Statistics")
-//
-//        val notifications = KeyboardRow()
-//        notifications.add("Notifications")
-//
-//        val account = KeyboardRow()
-//        account.add("Account")
-//
-//        rows.add(statistics)
-//        rows.add(notifications)
-//        rows.add(account)
-//
-//        // Set the keyboard to the markup
-//        keyboardMarkup.keyboard = rows
-//        // Add it to the message
-//        message.replyMarkup = keyboardMarkup
-//
-//        return message
-//    }
+    private fun operationMessage(update: Update): BotApiMethod<out Serializable> {
+        return botOperationService.handleOperation(update.message.chatId, update.message.text)
+    }
 
     fun <T : Serializable> sendMessage(message: BotApiMethod<T>) {
         try {
@@ -146,10 +113,29 @@ class TelegramBotService(@Value("\${telegram.token}") private val token: String,
 
     }
 
-    fun sendAuthConfirmationMessage(chatId: String, login: String) {
+    fun sendAuthConfirmationMessage(chatId: Long, login: String) {
         sendMessage(SendMessage()
                 .setChatId(chatId)
+                .setReplyMarkup(buildMainMenu())
                 .setText("Account quizlet.com for user $login added"))
+    }
+
+    private fun buildMainMenu(): ReplyKeyboardMarkup {
+        val keyboardMarkup = ReplyKeyboardMarkup().apply {
+            resizeKeyboard = true
+            selective = true
+        }
+
+        val rows = ArrayList<KeyboardRow>()
+        for (operation in BotOperationService.OPERATIONS) {
+            val row = KeyboardRow()
+            row.add(operation)
+            rows.add(row)
+        }
+
+        keyboardMarkup.keyboard = rows
+
+        return keyboardMarkup
     }
 
 }

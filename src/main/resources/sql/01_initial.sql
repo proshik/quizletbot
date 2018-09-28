@@ -10,7 +10,7 @@ create table if not exists users
 (
   id           serial primary key,
   created_date timestamp default now(),
-  chat_id      text UNIQUE NOT NULL
+  chat_id      bigint UNIQUE NOT NULL
 );
 
 create table if not exists account

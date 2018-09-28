@@ -1,4 +1,4 @@
-package ru.proshik.english.quizlet.telegramBot.service.action
+package ru.proshik.english.quizlet.telegramBot.service
 
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
@@ -17,32 +17,6 @@ class MessageFormatter {
         const val STEPPING = "step"
 
         const val ALL_ITEMS = "-1"
-    }
-
-    private fun buildInlineKeyboardMarkup(data: InlineKeyboardData): InlineKeyboardMarkup {
-        val keyboard = InlineKeyboardMarkup()
-
-        val rows = ArrayList<List<InlineKeyboardButton>>()
-
-        var i = 1
-        var row = ArrayList<InlineKeyboardButton>()
-        for (item in data.items) {
-
-            row.add(InlineKeyboardButton().setText(item.first).setCallbackData(item.second))
-
-            if (i % 4 == 0) {
-                rows.add(row)
-                i = 1
-                row = ArrayList()
-            } else {
-                i++
-            }
-        }
-
-        rows.add(row)
-
-        keyboard.keyboard = rows
-        return keyboard
     }
 
     fun navigateBySteps(chatId: Long,
