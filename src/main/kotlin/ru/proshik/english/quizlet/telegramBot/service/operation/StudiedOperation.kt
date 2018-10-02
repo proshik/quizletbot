@@ -1,26 +1,29 @@
 package ru.proshik.english.quizlet.telegramBot.service.operation
 
 import org.springframework.stereotype.Component
+import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
-import ru.proshik.english.quizlet.telegramBot.service.*
-import ru.proshik.english.quizlet.telegramBot.service.MessageFormatter.Companion.ALL_ITEMS
+import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder
+import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder.Companion.ALL_ITEMS
+import ru.proshik.english.quizlet.telegramBot.service.QuizletInfoService
 import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
 import ru.proshik.english.quizlet.telegramBot.service.model.SetStat
 import ru.proshik.english.quizlet.telegramBot.service.model.Studied
-import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SELECT_GROUP
-import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SELECT_SET
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.GROUP
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SET
+import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
 class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
-    val messageFormatter = MessageFormatter()
+    val messageFormatter = MessageBuilder()
 
     enum class StepType {
-        SELECT_GROUP,
-        SELECT_SET
+        GROUP,
+        SET
     }
 
     data class ActiveStep(val stepType: StepType, val userGroups: List<UserGroupsResp>, val groupId: Long?)
@@ -45,7 +48,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         when {
             userGroups.size > 1 -> {
                 text = """Select set(s):"""
-                stepType = SELECT_GROUP
+                stepType = GROUP
                 outputData = userGroups.asSequence()
                         .map { group -> Pair(group.name, group.id.toString()) }
                         .toList()
@@ -53,7 +56,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
             userGroups.size == 1 -> {
                 text = """Select group:"""
                 groupId = userGroups[0].id
-                stepType = SELECT_SET
+                stepType = SET
                 outputData = userGroups[0].sets.asSequence()
 //                        .sortedByDescending { set -> set.publishedDate }
                         .map { set -> Pair(set.title, set.id.toString()) }
@@ -78,44 +81,42 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
     override fun navigate(chatId: Long,
                           messageId: Int,
-                          callData: String): StepResult {
+                          callData: String): BotApiMethod<out Serializable> {
 
         // todo finish that
 //        val (command, value) = callData.split(";")
 //
 //        when (command) {
-//            MessageFormatter.PAGING_ELEMENT -> {}
-//            MessageFormatter.PAGING_BUTTONS -> {}
+//            MessageBuilder.PAGING_ELEMENT -> {}
+//            MessageBuilder.PAGING_BUTTONS -> {}
 //        }
-        val activeStep = stepStore[chatId] ?: return StepResult(EditMessageText()
+        val activeStep = stepStore[chatId] ?: return EditMessageText()
                 .setChatId(chatId)
                 .setMessageId(messageId)
                 .setText("Unexpected transition")
-                .setReplyMarkup(null), true)
+                .setReplyMarkup(null)
 
         return when (activeStep.stepType) {
-            SELECT_GROUP -> handleSelectGroup(chatId, messageId, callData, activeStep)
+            GROUP -> handleSelectGroup(chatId, messageId, callData, activeStep)
 
-            SELECT_SET -> handleSelectSet(chatId, messageId, callData, activeStep)
+            SET -> handleSelectSet(chatId, messageId, callData, activeStep)
         }
-
-//        val operationResult = operationResultStore[chatId]
     }
 
-    private fun handleSelectGroup(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): StepResult {
+    private fun handleSelectGroup(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): BotApiMethod<out Serializable> {
         val (command, value) = callData.split(";")
 
         when (command) {
-            MessageFormatter.STEPPING -> {
+            MessageBuilder.STEPPING -> {
                 val group = activeStep.userGroups.asSequence().filter { group -> group.id.toString() == value }.firstOrNull()
 
                 if (group == null) {
                     stepStore.remove(chatId)
-                    return StepResult(EditMessageText()
+                    return EditMessageText()
                             .setChatId(chatId)
                             .setMessageId(messageId)
                             .setText("Doesn't find group for $value")
-                            .setReplyMarkup(null), true)
+                            .setReplyMarkup(null)
                 }
 
                 val items = group.sets.asSequence()
@@ -124,15 +125,14 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
                 if (items.isEmpty()) {
                     stepStore.remove(chatId)
-                    return StepResult(EditMessageText()
+                    return EditMessageText()
                             .setChatId(chatId)
                             .setMessageId(messageId)
                             .setText("Doesn't find not one set for ${group.name}")
-                            .setReplyMarkup(null), true)
-
+                            .setReplyMarkup(null)
                 }
 
-                stepStore[chatId] = ActiveStep(SELECT_SET, activeStep.userGroups, group.id)
+                stepStore[chatId] = ActiveStep(SET, activeStep.userGroups, group.id)
 
                 val text = StringBuilder("Group: *${group.name}*\n")
                 text.append("Select a set from group: ")
@@ -142,35 +142,32 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                 // need to remove a previous studied result
                 operationResultStore.remove(chatId)
 
-                return StepResult(message, false)
+                return message
             }
             else -> throw RuntimeException("unexpected callbackData=$callData")
         }
     }
 
-    private fun handleSelectSet(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): StepResult {
+    private fun handleSelectSet(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): BotApiMethod<out Serializable> {
         val (command, value) = callData.split(";")
 
         return when (command) {
             // paging by result
-            MessageFormatter.PAGING_ELEMENT -> {
+            MessageBuilder.PAGING_ELEMENT -> {
                 val operationResult = operationResultStore[chatId]
                         ?: throw RuntimeException("not available command=\"$command\" for step")
-
 
                 val countOfItems = operationResult.studied.setsStats.size
                 val selectedItem = value.toInt()
 
                 val text = createMessageText(operationResult.studied.groupName, operationResult.studied.setsStats[selectedItem - 1])
 
-                val message = messageFormatter.navigateByItems(chatId, messageId, text, countOfItems, selectedItem)
-
                 operationResultStore[chatId] = OperationResult(operationResult.studied)
 
-                StepResult(message, true)
+                messageFormatter.navigateByItems(chatId, messageId, text, countOfItems, selectedItem)
             }
             // select next step or another varieties of elements
-            MessageFormatter.STEPPING -> {
+            MessageBuilder.STEPPING -> {
                 if (operationResultStore[chatId] != null) {
                     operationResultStore.remove(chatId)
                 }
@@ -189,13 +186,11 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                 }
 
                 if (setIds.isEmpty()) {
-                    val message = EditMessageText()
+                    return EditMessageText()
                             .setChatId(chatId)
                             .setMessageId(messageId)
                             .setText("Incorrect request. The operation will start from the beginning${group.name}")
                             .setReplyMarkup(null)
-
-                    return StepResult(message, true)
                 }
 
                 val statistics = quizletInfoService.buildStatistic(chatId, group.id, setIds, activeStep.userGroups)
@@ -204,27 +199,18 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
                 val text = createMessageText(statistics.groupName, statistics.setsStats[0])
 
-                val message = messageFormatter.navigateByItems(chatId, messageId, text, statistics.setsStats.size)
-
-                StepResult(message, true)
+                messageFormatter.navigateByItems(chatId, messageId, text, statistics.setsStats.size)
             }
-            MessageFormatter.PAGING_BUTTONS -> {
-                val iterableStep = stepStore[chatId]
-                if (iterableStep == null) {
-                    val message = EditMessageText()
-                            .setChatId(chatId)
-                            .setMessageId(messageId)
-                            .setText("Incorrect request. Saved step doesn't find")
-                            .setReplyMarkup(null)
-
-                    return StepResult(message, true)
-                }
+            MessageBuilder.PAGING_BUTTONS -> {
+                val iterableStep = stepStore[chatId] ?: return EditMessageText()
+                        .setChatId(chatId)
+                        .setMessageId(messageId)
+                        .setText("Incorrect request. Saved step doesn't find")
+                        .setReplyMarkup(null)
 
                 val group = iterableStep.userGroups.asSequence()
                         .filter { group -> group.id == iterableStep.groupId }
                         .first()
-
-//                stepStore[chatId] = ActiveStep(SELECT_SET, activeStep.userGroups, group.id)
 
                 val text = StringBuilder("Group: *${group.name}*\n")
                 text.append("Select a set from group: ")
@@ -233,10 +219,8 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 //                        .sortedByDescending { set -> set.publishedDate }
                         .map { it -> Pair(it.title, it.id.toString()) }.toList()
 
-                val message = messageFormatter.navigateBySteps(chatId, text.toString(), items, messageId,
+                return messageFormatter.navigateBySteps(chatId, text.toString(), items, messageId,
                         firstElemInGr = value.toInt(), pagingButton = true, showAllLine = true)
-
-                return StepResult(message, true)
             }
             else -> throw RuntimeException("unexpected callbackData=$callData")
         }

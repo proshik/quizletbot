@@ -4,8 +4,9 @@ enum class CommandType(val title: String) {
 
     START("/start"),
     HELP("/help"),
-    AUTHORIZE("/authorize"),
-    RE_AUTHORIZE("/re-authorize");
+    AUTHORIZE("/auth"),
+    RE_AUTHORIZE("/re-auth"),
+    REVOKE_AUTH("/revoke-auth");
 
     companion object {
 

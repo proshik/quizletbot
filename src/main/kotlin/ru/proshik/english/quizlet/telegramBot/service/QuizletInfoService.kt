@@ -15,7 +15,7 @@ import ru.proshik.english.quizlet.telegramBot.service.model.Studied
 class QuizletInfoService(private val accountService: AccountService,
                          private val quizletClient: QuizletClient) {
 
-
+    // TODO throw access token to that method signature
     fun userGroups(chatId: Long): List<UserGroupsResp> {
         val account = getAccount(chatId)
 
