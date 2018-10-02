@@ -1,4 +1,4 @@
-package ru.proshik.english.quizlet.telegramBot.service.model
+package ru.proshik.english.quizlet.telegramBot.service.vo
 
 data class Studied(val groupId: Long,
                    val groupName: String,

@@ -6,7 +6,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
-import ru.proshik.english.quizlet.telegramBot.service.model.ModeType;
+import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType;
 
 import javax.persistence.*;
 import java.io.IOException;

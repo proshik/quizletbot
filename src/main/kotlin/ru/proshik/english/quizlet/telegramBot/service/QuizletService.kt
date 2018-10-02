@@ -6,14 +6,15 @@ import ru.proshik.english.quizlet.telegramBot.dto.SetResp
 import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
 import ru.proshik.english.quizlet.telegramBot.model.Account
-import ru.proshik.english.quizlet.telegramBot.service.model.ModeStat
-import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
-import ru.proshik.english.quizlet.telegramBot.service.model.SetStat
-import ru.proshik.english.quizlet.telegramBot.service.model.Studied
+import ru.proshik.english.quizlet.telegramBot.repository.AccountRepository
+import ru.proshik.english.quizlet.telegramBot.service.vo.ModeStat
+import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType
+import ru.proshik.english.quizlet.telegramBot.service.vo.SetStat
+import ru.proshik.english.quizlet.telegramBot.service.vo.Studied
 
 @Service
-class QuizletInfoService(private val accountService: AccountService,
-                         private val quizletClient: QuizletClient) {
+class QuizletService(private val quizletClient: QuizletClient,
+                     private val accountRepository: AccountRepository) {
 
     // TODO throw access token to that method signature
     fun userGroups(chatId: Long): List<UserGroupsResp> {
@@ -22,10 +23,10 @@ class QuizletInfoService(private val accountService: AccountService,
         return quizletClient.userGroups(account.login, account.accessToken)
     }
 
-    fun buildStatistic(chatId: Long,
-                       groupId: Long,
-                       setIds: List<Long>,
-                       userGroups: List<UserGroupsResp>): Studied {
+    fun studiedInfo(chatId: Long,
+                    groupId: Long,
+                    setIds: List<Long>,
+                    userGroups: List<UserGroupsResp>): Studied {
         val account = getAccount(chatId)
 
         val userStudied = quizletClient.userStudied(account.login, account.accessToken)
@@ -36,12 +37,12 @@ class QuizletInfoService(private val accountService: AccountService,
                 .toList()
                 .first()
 
-        val setStats = buildStatistic(userStudied, pair.second)
+        val setStats = studiedInfo(userStudied, pair.second)
 
         return Studied(pair.first.id, pair.first.name, setStats)
     }
 
-    private fun buildStatistic(studied: List<UserStudiedResp>, sets: List<SetResp>): List<SetStat> {
+    private fun studiedInfo(studied: List<UserStudiedResp>, sets: List<SetResp>): List<SetStat> {
         val studiedSetsBySetId = studied.groupBy { userStudiedResp: UserStudiedResp -> userStudiedResp.set.id }
 
         return sets.map { set ->
@@ -58,7 +59,7 @@ class QuizletInfoService(private val accountService: AccountService,
     }
 
     private fun getAccount(chatId: Long): Account {
-        return accountService.getAccount(chatId) ?: throw RuntimeException("unexpected behaviour")
+        return accountRepository.findAccountByUserChatId(chatId) ?: throw RuntimeException("unexpected behaviour")
     }
 
 }

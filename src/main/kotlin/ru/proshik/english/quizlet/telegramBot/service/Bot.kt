@@ -5,27 +5,27 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.DefaultBotOptions
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
-import org.telegram.telegrambots.meta.api.methods.ActionType
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.ParseMode
-import org.telegram.telegrambots.meta.api.methods.send.SendChatAction
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.bots.AbsSender
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.meta.updateshandlers.SentCallback
-import ru.proshik.english.quizlet.telegramBot.service.TelegramBotHandler.Companion.buildMainMenu
+import ru.proshik.english.quizlet.telegramBot.queue.NotificationQueue
 import java.io.Serializable
+import javax.annotation.PostConstruct
 
 @Component
-class TelegramBot(@Value("\${telegram.token}") private val token: String,
-                  @Value("\${telegram.username}") private val username: String,
-                  defaultBotOptions: DefaultBotOptions,
-                  val telegramBotHandler: TelegramBotHandler) : TelegramLongPollingBot(defaultBotOptions) {
+class Bot(@Value("\${telegram.token}") private val token: String,
+          @Value("\${telegram.username}") private val username: String,
+          private val botService: BotService,
+          private val notificationQueue: NotificationQueue,
+          defaultBotOptions: DefaultBotOptions) : TelegramLongPollingBot(defaultBotOptions) {
 
     companion object {
 
-        private val LOG = Logger.getLogger(TelegramBot::class.java)
+        private val LOG = Logger.getLogger(Bot::class.java)
     }
 
     @Suppress("EXTENSION_SHADOWED_BY_MEMBER")
@@ -33,13 +33,19 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
         this.execute(message)
     }
 
+    @PostConstruct
+    fun init() {
+        registerNotificationScheduler()
+    }
+
     override fun onUpdateReceived(update: Update) {
         try {
             execute(onWebHookUpdateReceived(update))
         } catch (e: Exception) {
-            LOG.error("Panic! Messages not sending! Internal exception.", e)
+            LOG.error("message doesn't send", e)
             sendMessage(buildErrorMessage(update))
         } catch (e: Error) {
+            //TODO check how bot will work after Error. Example: TODO() method
             LOG.error("Panic! Messages not sending! Internal error", e)
             sendMessage(buildErrorMessage(update))
         }
@@ -53,11 +59,16 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
         return token
     }
 
-    fun onWebHookUpdateReceived(update: Update): BotApiMethod<out Serializable> = when {
-        update.hasMessage() -> message(update)
-        update.hasCallbackQuery() -> callback(update)
-        update.hasEditedMessage() -> SendMessage().setChatId(update.message.chatId).setText("Operation doesn't support. The edited Message")
-        else -> SendMessage().setChatId(update.message.chatId).setText("unexpected operation")
+    fun onWebHookUpdateReceived(update: Update): BotApiMethod<out Serializable> {
+        return when {
+            update.hasMessage() -> message(update)
+            update.hasCallbackQuery() -> callback(update)
+            //TODO investigate this behaviour
+            update.hasEditedMessage() -> SendMessage()
+                    .setChatId(update.message.chatId)
+                    .setText("Operation doesn't support, edited message")
+            else -> SendMessage().setChatId(update.message.chatId).setText("unexpected operation")
+        }
     }
 
     fun <T : Serializable> sendMessage(message: BotApiMethod<T>) {
@@ -66,7 +77,6 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
         } catch (e: TelegramApiException) {
             LOG.error("send message", e)
         }
-
     }
 
     fun <T : Serializable> sendMessage(message: BotApiMethod<T>, callback: SentCallback<T>) {
@@ -77,23 +87,43 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
         }
     }
 
-    fun sendAuthConfirmationMessage(chatId: Long, login: String) {
-        sendMessage(SendMessage()
-                .setChatId(chatId)
-                .setText("The account was added! ")
-                .setReplyMarkup(buildMainMenu()))
+    private fun registerNotificationScheduler() {
+        Thread {
+            while (true) {
+                val notifyMessage = try {
+                    notificationQueue.take()
+                } catch (ex: Exception) {
+                    LOG.error("read from queue", ex)
+                    continue
+                }
+
+                val message = SendMessage().setChatId(notifyMessage.chatId).setText(notifyMessage.text)
+
+                try {
+                    execute(message)
+                } catch (e: TelegramApiException) {
+                    LOG.error("notification messages doesn't send", e)
+                }
+            }
+        }.start()
     }
 
     private fun message(update: Update): BotApiMethod<out Serializable> {
-        val chatAction = SendChatAction().setChatId(update.message.chatId).setAction(ActionType.TYPING)
-        sendMessage(chatAction)
+//        sendMessage(SendChatAction().setChatId(update.message.chatId).setAction(ActionType.TYPING))
+
+        val chatId = update.message.chatId
+        val text = update.message.text
 
         return when {
-            update.message.isCommand -> commandMessage(update)
-            //TODO remove or use this type of messages
-            update.message.isReply -> SendMessage().setChatId(update.message.chatId).setText("isReply")
-            update.message.isUserMessage -> operationMessage(update)
-            else -> SendMessage().setChatId(update.message.chatId).setText("unexpected type of message")
+            update.message.isCommand -> botService.handleCommand(chatId, text)
+            //TODO investigate this behaviour
+            update.message.isReply -> SendMessage()
+                    .setChatId(chatId)
+                    .setText("Operation doesn't support, isReply message")
+            update.message.isUserMessage -> botService.handleOperation(chatId, update.message.messageId, text)
+            else -> SendMessage()
+                    .setChatId(chatId)
+                    .setText("unexpected type of message")
         }
     }
 
@@ -102,19 +132,11 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
         val messageId = update.callbackQuery.message.messageId
         val callData = update.callbackQuery.data
 
-        val chatAction = SendChatAction().setChatId(chatId).setAction(ActionType.TYPING)
-        sendMessage(chatAction)
+//        sendMessage(SendChatAction().setChatId(chatId).setAction(ActionType.TYPING))
 
-        return telegramBotHandler.handleCallback(chatId, messageId, callData)
+        return botService.handleCallback(chatId, messageId, callData)
     }
 
-    private fun commandMessage(update: Update): BotApiMethod<out Serializable> {
-        return telegramBotHandler.handleCommand(update.message.chatId, update.message.text)
-    }
-
-    private fun operationMessage(update: Update): BotApiMethod<out Serializable> {
-        return telegramBotHandler.handleOperation(update.message.chatId, update.message.messageId, update.message.text)
-    }
 
     private fun buildErrorMessage(update: Update): SendMessage {
         return SendMessage()

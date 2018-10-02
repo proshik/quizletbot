@@ -19,14 +19,31 @@ class MessageBuilder {
         const val ALL_ITEMS = "-1"
     }
 
-    fun navigateBySteps(chatId: Long,
-                        messageText: String,
-                        items: List<Pair<String, String>>,
-                        messageId: Int? = null,
-                        itemInRow: Int = 1,
-                        firstElemInGr: Int = 1,
-                        pagingButton: Boolean = false,
-                        showAllLine: Boolean = false): BotApiMethod<out Serializable> {
+    /**
+     * Build message with inline keyboard, where allow:
+     *  - chose items;
+     *  - update a keyboard with items to select another ones.
+     *
+     *  Example:
+     *  ___________________________
+     * | Message                   |
+     * |                           |
+     * | bla-bla-bla               |
+     * |___________________________|
+     * |___________ All ___________|
+     * |_________ Item 1 __________| -> items, you can chose them
+     * |_________ Item 2 __________|
+     * |_ Prev 2 _ .3-4. _ Next 2 _| -> buttons that will update above items (Item 1, Item 2)
+     *
+     */
+    fun buildStepPageKeyboardMessage(chatId: Long,
+                                     messageText: String,
+                                     items: List<Pair<String, String>>,
+                                     messageId: Int? = null,
+                                     itemInRow: Int = 1,
+                                     firstElemInGroup: Int = 1,
+                                     pagingButton: Boolean = false,
+                                     showAllLine: Boolean = false): BotApiMethod<out Serializable> {
 
         // check input params
         if (items.isEmpty()) throw IllegalArgumentException("unexpectable count of values items=${items.size}")
@@ -34,68 +51,7 @@ class MessageBuilder {
         if (itemInRow > 1 && items.size < itemInRow)
             throw IllegalArgumentException("unexpectable value itemInRow=$itemInRow when size of items is ${items.size}")
 
-        // initialize rows
-        val rows = ArrayList<List<InlineKeyboardButton>>()
-        // check and add the first line with a title "All items"
-        if (showAllLine && items.size > 1) {
-            val allElementRow = ArrayList<InlineKeyboardButton>()
-            allElementRow.add(InlineKeyboardButton().setText("All items").setCallbackData("$STEPPING;$ALL_ITEMS"))
-            rows.add(allElementRow)
-        }
-
-        // main block. Fill items
-        var i = 1
-        var itemRows = ArrayList<InlineKeyboardButton>()
-        val iterableItems = if (items.size > 4 && firstElemInGr + 4 > items.size)
-            items.subList(firstElemInGr - 1, items.size)
-        else if (items.size > 4) {
-            items.subList(firstElemInGr - 1, firstElemInGr + 3)
-        } else items
-        for (item in iterableItems) {
-            itemRows.add(InlineKeyboardButton().setText(item.first).setCallbackData("$STEPPING;${item.second}"))
-
-            if (i % itemInRow == 0) {
-                rows.add(itemRows)
-                i = 1
-                itemRows = ArrayList()
-            } else {
-                i++
-            }
-        }
-        rows.add(itemRows)
-
-        // add buttons to navigate
-        val navigationRow = ArrayList<InlineKeyboardButton>()
-        if (items.size in 5..8) {
-            if (firstElemInGr < 5) {
-                navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BUTTONS;1"))
-                navigationRow.add(InlineKeyboardButton().setText("5-${items.size}").setCallbackData("$PAGING_BUTTONS;5"))
-            } else {
-                navigationRow.add(InlineKeyboardButton().setText("1-4").setCallbackData("$PAGING_BUTTONS;1"))
-                navigationRow.add(InlineKeyboardButton().setText("·5-${items.size}·").setCallbackData("$PAGING_BUTTONS;5"))
-            }
-        } else if (items.size > 8) {
-            if (firstElemInGr == 1) {
-                navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BUTTONS;1"))
-                navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BUTTONS;5"))
-            } else if (firstElemInGr in items.size - 4..items.size) {
-                navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BUTTONS;${firstElemInGr - 4}"))
-                val text = if (firstElemInGr == items.size) {
-                    "$firstElemInGr"
-                } else {
-                    "$firstElemInGr-${items.size}"
-                }
-                navigationRow.add(InlineKeyboardButton().setText("·$text·").setCallbackData("$PAGING_BUTTONS;$firstElemInGr"))
-            } else {
-                navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BUTTONS;${firstElemInGr - 4}"))
-                navigationRow.add(InlineKeyboardButton().setText("·$firstElemInGr-${firstElemInGr + 3}·").setCallbackData("$PAGING_BUTTONS;$firstElemInGr"))
-                navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BUTTONS;${firstElemInGr + 4}"))
-            }
-        }
-        rows.add(navigationRow)
-
-        val keyboard = InlineKeyboardMarkup()
-        keyboard.keyboard = rows
+        val keyboard = if (items.size > 1) buildInlineKeyboard(showAllLine, items, firstElemInGroup, itemInRow) else null
 
         if (pagingButton) {
             return EditMessageReplyMarkup()
@@ -119,14 +75,25 @@ class MessageBuilder {
                     .setReplyMarkup(keyboard)
     }
 
-    fun navigateByItems(chatId: Long,
-                        messageId: Int,
-                        text: String,
-                        countOfItems: Int,
-                        selectedItem: Int = 1): BotApiMethod<out Serializable> {
+    /**
+     * Build message with inline keyboard with paging by items
+     *
+     *  Example:
+     *  __________________________________________
+     * | Message 1                                |
+     * |                                          | -> body message
+     * | bla-bla-bla                              |
+     * |__________________________________________|
+     * |____.1.____ 2 ____ 3 ____ 4 _____ 19>>____| -> it is a paging
+     *
+     */
+    fun buildItemPageKeyboardMessage(chatId: Long,
+                                     messageId: Int,
+                                     text: String,
+                                     countOfItems: Int,
+                                     selectedItem: Int = 1): BotApiMethod<out Serializable> {
 
-
-        val keyboard = if (countOfItems > 1) buildIInlinePagingKeyboard(countOfItems, selectedItem) else null
+        val keyboard = if (countOfItems > 1) buildInlineKeyboard(countOfItems, selectedItem) else null
 
         return EditMessageText()
                 .setChatId(chatId)
@@ -136,7 +103,81 @@ class MessageBuilder {
                 .enableMarkdown(true)
     }
 
-    private fun buildIInlinePagingKeyboard(countOfItems: Int, selectedItem: Int): InlineKeyboardMarkup {
+    private fun buildInlineKeyboard(showAllLine: Boolean,
+                                    items: List<Pair<String, String>>,
+                                    firstElemInGroup: Int,
+                                    itemInRow: Int): InlineKeyboardMarkup {
+        val keyboard = InlineKeyboardMarkup()
+
+        // initialize rows
+        val rows = ArrayList<List<InlineKeyboardButton>>()
+        // check and add the first line with a title "All items"
+        if (showAllLine && items.size > 1) {
+            val allElementRow = ArrayList<InlineKeyboardButton>()
+            allElementRow.add(InlineKeyboardButton().setText("All items").setCallbackData("$STEPPING;$ALL_ITEMS"))
+            rows.add(allElementRow)
+        }
+
+        // main block. Fill items
+        var i = 1
+        var itemRows = ArrayList<InlineKeyboardButton>()
+        val iterableItems = if (items.size > 4 && firstElemInGroup + 4 > items.size)
+            items.subList(firstElemInGroup - 1, items.size)
+        else if (items.size > 4) {
+            items.subList(firstElemInGroup - 1, firstElemInGroup + 3)
+        } else items
+        for (item in iterableItems) {
+            itemRows.add(InlineKeyboardButton().setText(item.first).setCallbackData("$STEPPING;${item.second}"))
+
+            if (i % itemInRow == 0) {
+                rows.add(itemRows)
+                i = 1
+                itemRows = ArrayList()
+            } else {
+                i++
+            }
+        }
+        rows.add(itemRows)
+
+        // add buttons to navigate
+        val navigationRow = ArrayList<InlineKeyboardButton>()
+        if (items.size in 5..8) {
+            if (firstElemInGroup < 5) {
+                navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BUTTONS;1"))
+                navigationRow.add(InlineKeyboardButton().setText("5-${items.size}").setCallbackData("$PAGING_BUTTONS;5"))
+            } else {
+                navigationRow.add(InlineKeyboardButton().setText("1-4").setCallbackData("$PAGING_BUTTONS;1"))
+                navigationRow.add(InlineKeyboardButton().setText("·5-${items.size}·").setCallbackData("$PAGING_BUTTONS;5"))
+            }
+        } else if (items.size > 8) {
+            when (firstElemInGroup) {
+                1 -> {
+                    navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BUTTONS;1"))
+                    navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BUTTONS;5"))
+                }
+                in items.size - 4..items.size -> {
+                    navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BUTTONS;${firstElemInGroup - 4}"))
+                    val text = if (firstElemInGroup == items.size) {
+                        "$firstElemInGroup"
+                    } else {
+                        "$firstElemInGroup-${items.size}"
+                    }
+                    navigationRow.add(InlineKeyboardButton().setText("·$text·").setCallbackData("$PAGING_BUTTONS;$firstElemInGroup"))
+                }
+                else -> {
+                    navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BUTTONS;${firstElemInGroup - 4}"))
+                    navigationRow.add(InlineKeyboardButton().setText("·$firstElemInGroup-${firstElemInGroup + 3}·").setCallbackData("$PAGING_BUTTONS;$firstElemInGroup"))
+                    navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BUTTONS;${firstElemInGroup + 4}"))
+                }
+            }
+        }
+        rows.add(navigationRow)
+
+        keyboard.keyboard = rows
+        return keyboard
+    }
+
+    private fun buildInlineKeyboard(countOfItems: Int, selectedItem: Int): InlineKeyboardMarkup {
         val keyboard = InlineKeyboardMarkup()
 
         // initialize rows
