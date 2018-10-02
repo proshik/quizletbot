@@ -14,7 +14,7 @@ class AuthenticationService(private val stateService: QuizletStateService,
                             private val quizletClient: QuizletClient,
                             private val usersService: UsersService,
         // TODO change an architecture of classes and remove @Lazy
-                            @Lazy private val telegramBotService: TelegramBotService) {
+                            @Lazy private val telegramBot: TelegramBot) {
 
     companion object {
         const val QUIZLET_BASE_URL = "https://quizlet.com/authorize"
@@ -60,7 +60,7 @@ class AuthenticationService(private val stateService: QuizletStateService,
         stateService.delete(state)
 
         // get userId(chatId) to notify in the telegram by chatId
-        telegramBotService.sendAuthConfirmationMessage(user.chatId, user.account.login)
+        telegramBot.sendAuthConfirmationMessage(user.chatId, user.account.login)
     }
 
     fun connectToQuizlet(chatId: Long): String {

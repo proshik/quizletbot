@@ -11,4 +11,8 @@ class AccountService(private val accountRepository: AccountRepository) {
         return accountRepository.findAccountByUserChatId(chatId)
     }
 
+    fun deleteAccount(accountId: Long) {
+        accountRepository.deleteByAccountId(accountId)
+    }
+
 }
