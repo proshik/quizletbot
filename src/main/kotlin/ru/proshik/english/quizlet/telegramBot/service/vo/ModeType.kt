@@ -1,4 +1,4 @@
-package ru.proshik.english.quizlet.telegramBot.service.model
+package ru.proshik.english.quizlet.telegramBot.service.vo
 
 enum class ModeType(val title: String,
                     val designations: List<String>) {

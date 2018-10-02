@@ -2,6 +2,7 @@ package ru.proshik.english.quizlet.telegramBot.service.model
 
 import org.junit.Assert.assertEquals
 import org.junit.Test
+import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType
 
 class ModeTypeTest {
 

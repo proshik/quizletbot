@@ -1,13 +1,14 @@
-package ru.proshik.english.quizlet.telegramBot.service
+package ru.proshik.english.quizlet.telegramBot.repository
 
 import org.springframework.stereotype.Service
 import java.util.*
 import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.ConcurrentMap
 
 @Service
-class QuizletStateService {
+class StateRepository {
 
-    private var store: ConcurrentHashMap<String, Long> = ConcurrentHashMap()
+    private var store: ConcurrentMap<String, Long> = ConcurrentHashMap()
 
     fun add(chatId: Long): String {
         val state = generateState()

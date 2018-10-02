@@ -7,17 +7,17 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageTe
 import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder.Companion.ALL_ITEMS
-import ru.proshik.english.quizlet.telegramBot.service.QuizletInfoService
-import ru.proshik.english.quizlet.telegramBot.service.model.ModeType
-import ru.proshik.english.quizlet.telegramBot.service.model.SetStat
-import ru.proshik.english.quizlet.telegramBot.service.model.Studied
+import ru.proshik.english.quizlet.telegramBot.service.QuizletService
+import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType
+import ru.proshik.english.quizlet.telegramBot.service.vo.SetStat
+import ru.proshik.english.quizlet.telegramBot.service.vo.Studied
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.GROUP
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SET
 import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
 @Component
-class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
+class StudiedOperation(val quizletService: QuizletService) : Operation {
 
     val messageFormatter = MessageBuilder()
 
@@ -38,7 +38,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         stepStore.remove(chatId)
         operationResultStore.remove(chatId)
 
-        val userGroups = quizletInfoService.userGroups(chatId)
+        val userGroups = quizletService.userGroups(chatId)
 
         //TODO do refactoring that ugly code
         val text: String
@@ -69,7 +69,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
             // save information about active step
             stepStore[chatId] = ActiveStep(stepType, userGroups, groupId)
             // build text message with keyboard
-            val message = messageFormatter.navigateBySteps(chatId, text, outputData)
+            val message = messageFormatter.buildStepPageKeyboardMessage(chatId, text, outputData)
             // result object
             InitResult(message, true)
         } else {
@@ -137,7 +137,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                 val text = StringBuilder("Group: *${group.name}*\n")
                 text.append("Select a set from group: ")
 
-                val message = messageFormatter.navigateBySteps(chatId, text.toString(), items, messageId, showAllLine = true)
+                val message = messageFormatter.buildStepPageKeyboardMessage(chatId, text.toString(), items, messageId, showAllLine = true)
 
                 // need to remove a previous studied result
                 operationResultStore.remove(chatId)
@@ -148,7 +148,10 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
         }
     }
 
-    private fun handleSelectSet(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): BotApiMethod<out Serializable> {
+    private fun handleSelectSet(chatId: Long,
+                                messageId: Int,
+                                callData: String,
+                                activeStep: ActiveStep): BotApiMethod<out Serializable> {
         val (command, value) = callData.split(";")
 
         return when (command) {
@@ -164,7 +167,7 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 
                 operationResultStore[chatId] = OperationResult(operationResult.studied)
 
-                messageFormatter.navigateByItems(chatId, messageId, text, countOfItems, selectedItem)
+                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, countOfItems, selectedItem)
             }
             // select next step or another varieties of elements
             MessageBuilder.STEPPING -> {
@@ -193,13 +196,13 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
                             .setReplyMarkup(null)
                 }
 
-                val statistics = quizletInfoService.buildStatistic(chatId, group.id, setIds, activeStep.userGroups)
+                val statistics = quizletService.studiedInfo(chatId, group.id, setIds, activeStep.userGroups)
 
                 operationResultStore[chatId] = OperationResult(statistics)
 
                 val text = createMessageText(statistics.groupName, statistics.setsStats[0])
 
-                messageFormatter.navigateByItems(chatId, messageId, text, statistics.setsStats.size)
+                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, statistics.setsStats.size)
             }
             MessageBuilder.PAGING_BUTTONS -> {
                 val iterableStep = stepStore[chatId] ?: return EditMessageText()
@@ -219,8 +222,8 @@ class StudiedOperation(val quizletInfoService: QuizletInfoService) : Operation {
 //                        .sortedByDescending { set -> set.publishedDate }
                         .map { it -> Pair(it.title, it.id.toString()) }.toList()
 
-                return messageFormatter.navigateBySteps(chatId, text.toString(), items, messageId,
-                        firstElemInGr = value.toInt(), pagingButton = true, showAllLine = true)
+                return messageFormatter.buildStepPageKeyboardMessage(chatId, text.toString(), items, messageId,
+                        firstElemInGroup = value.toInt(), pagingButton = true, showAllLine = true)
             }
             else -> throw RuntimeException("unexpected callbackData=$callData")
         }
