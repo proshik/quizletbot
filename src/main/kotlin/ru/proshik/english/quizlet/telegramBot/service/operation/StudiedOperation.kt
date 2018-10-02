@@ -8,11 +8,11 @@ import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder.Companion.ALL_ITEMS
 import ru.proshik.english.quizlet.telegramBot.service.QuizletService
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.GROUP
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SET
 import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType
 import ru.proshik.english.quizlet.telegramBot.service.vo.SetStat
 import ru.proshik.english.quizlet.telegramBot.service.vo.Studied
-import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.GROUP
-import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation.StepType.SET
 import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
@@ -231,9 +231,9 @@ class StudiedOperation(val quizletService: QuizletService) : Operation {
     }
 
     fun createMessageText(groupName: String, set: SetStat): String {
-        val res = StringBuilder("Group: *$groupName*\n\n")
+        val res = StringBuilder("Group: *$groupName*\n")
 
-        res.append("Set: *${set.title}*\n")
+        res.append("Set: *${set.title}*\n\n")
 
         val modeStatByMode = set.modeStats.groupBy { modeStat -> modeStat.mode }.toMap()
 
