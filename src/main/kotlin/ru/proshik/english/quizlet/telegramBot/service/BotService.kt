@@ -1,5 +1,6 @@
 package ru.proshik.english.quizlet.telegramBot.service
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import org.apache.log4j.Logger
 import org.springframework.stereotype.Component
 import org.springframework.transaction.annotation.Transactional
@@ -14,16 +15,17 @@ import ru.proshik.english.quizlet.telegramBot.service.BotService.MainMenu.NOTIFI
 import ru.proshik.english.quizlet.telegramBot.service.BotService.MainMenu.STUDIED
 import ru.proshik.english.quizlet.telegramBot.service.BotService.NotificationMenu.*
 import ru.proshik.english.quizlet.telegramBot.service.operation.NotificationOperation
-import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperation
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperationService
 import ru.proshik.english.quizlet.telegramBot.service.vo.CommandType
+import ru.proshik.english.quizlet.telegramBot.service.vo.OperationData
 import java.io.Serializable
-import java.util.concurrent.ConcurrentHashMap
 
 @Component
-class BotService(private val accountRepository: AccountRepository,
+class BotService(private val studiedOperationService: StudiedOperationService,
+                 private val accountRepository: AccountRepository,
                  private val authenticationService: AuthenticationService,
-                 private val studiedOperation: StudiedOperation,
-                 private val notificationOperation: NotificationOperation) {
+                 private val notificationOperation: NotificationOperation,
+                 private val objectMapper: ObjectMapper) {
 
     // TODO implement menu as a Tree structure
     enum class GreetingsMenu(val title: String) {
@@ -45,7 +47,7 @@ class BotService(private val accountRepository: AccountRepository,
 
         private val LOG = Logger.getLogger(BotService::class.java)
 
-        private const val DEFAULT_MESSAGE = "The bot will help you to get information about studied sets on https://quizlet.com"
+        private const val DEFAULT_MESSAGE = "The bot will help you to get information about studied sets on https://quizlet.com."
         private const val AUTHORIZE_URL = "Please, use the URL to authorize with quizlet's site:"
         private const val COMMAND_NOT_FOUND = "Command doesn't exist."
 
@@ -80,18 +82,13 @@ class BotService(private val accountRepository: AccountRepository,
         }
     }
 
-    data class ActionOperation(val operation: MainMenu, val messageId: Int? = null)
-
-    private val actionOperationStore = ConcurrentHashMap<Long, ActionOperation>()
-
     @Transactional
     fun handleCommand(chatId: Long, text: String): BotApiMethod<out Serializable> {
-        val account = accountRepository.findAccountByUserChatId(chatId)
-
         val commandType = CommandType.getByName(text) ?: return buildMessage(chatId, COMMAND_NOT_FOUND)
 
         return when (commandType) {
             CommandType.START, CommandType.HELP -> {
+                val account = accountRepository.findAccountByUserChatId(chatId)
                 val keyboard = if (account != null) buildMainMenu() else buildAuthorizeMenu()
                 buildMessage(chatId, DEFAULT_MESSAGE, keyboard)
             }
@@ -103,6 +100,7 @@ class BotService(private val accountRepository: AccountRepository,
                 buildMessage(chatId, "$AUTHORIZE_URL $authUrl")
             }
             CommandType.REVOKE_AUTH -> {
+                val account = accountRepository.findAccountByUserChatId(chatId)
                 if (account != null) {
                     accountRepository.deleteByAccountId(account.id)
 
@@ -118,48 +116,58 @@ class BotService(private val accountRepository: AccountRepository,
 
     @Transactional
     fun handleOperation(chatId: Long, messageId: Int, text: String): BotApiMethod<out Serializable> {
-        val account = accountRepository.findAccountByUserChatId(chatId)
-
         return when (text) {
             AUTHORIZE.title -> {
+                val account = accountRepository.findAccountByUserChatId(chatId)
+                if (account != null) {
+                    return buildMessage(chatId, "You've have already authenticated with Quizlet.", buildMainMenu())
+                }
+
                 val authUrl = authenticationService.connectToQuizlet(chatId)
                 buildMessage(chatId, "$AUTHORIZE_URL $authUrl", buildAuthorizeMenu())
             }
             STUDIED.title -> {
-                val (message, existData) = studiedOperation.init(chatId)
+                val account = accountRepository.findAccountByUserChatId(chatId)
+                        ?: return buildMessage(chatId, "Please, authorize with quizlet.com, use the screen keyboard.", buildAuthorizeMenu())
 
-                if (existData)
-                    actionOperationStore[chatId] = ActionOperation(STUDIED)
-                message
+                return studiedOperationService.init(chatId, account)
             }
             NOTIFICATIONS.title -> buildMessage(chatId, "Select a notification type: ", buildNotificationMenu())
-            // TODO update it after implement
-            REMINDING.title -> return notificationOperation.init(chatId).message
-            MAIN_MENU.title -> buildMessage(chatId, "Please, use a keyboard", buildMainMenu())
-            else -> buildMessage(
-                    chatId,
-                    "Unknown operation. Please, use a keyboard buttons",
-                    if (account != null) buildMainMenu() else buildAuthorizeMenu(),
-                    messageId)
+            REMINDING.title -> {
+                val account = accountRepository.findAccountByUserChatId(chatId)
+                        ?: return buildMessage(chatId, "Please, authorize with quizlet.com, use the screen keyboard.", buildAuthorizeMenu())
+
+                return notificationOperation.init(chatId, account)
+            }
+            MAIN_MENU.title -> {
+                accountRepository.findAccountByUserChatId(chatId)
+                        ?: return buildMessage(chatId, "Please, authorize with quizlet.com, use the screen keyboard.", buildAuthorizeMenu())
+
+                buildMessage(chatId, "Please, use a screen keyboard.", buildMainMenu())
+            }
+            else -> {
+                val keyboard =
+                        if (accountRepository.findAccountByUserChatId(chatId) != null) buildMainMenu()
+                        else buildAuthorizeMenu()
+
+                buildMessage(chatId, "Unknown operation. Please, use a keyboard buttons", keyboard, messageId)
+            }
         }
     }
 
     @Transactional
     fun handleCallback(chatId: Long, messageId: Int, callData: String): BotApiMethod<out Serializable> {
-        val account = accountRepository.findAccountByUserChatId(chatId) ?: return SendMessage()
-                .setChatId(chatId)
-                .setText("Please, authorize with quizlet.com, use the screen keyboard")
-                .setReplyMarkup(buildAuthorizeMenu())
+        val account = accountRepository.findAccountByUserChatId(chatId)
+                ?: return buildMessage(chatId, "Please, authorize with quizlet.com, use the screen keyboard.", buildAuthorizeMenu())
 
-        val actionOperations = actionOperationStore[chatId]
-        return if (actionOperations != null) {
-            return when (actionOperations.operation) {
-                STUDIED -> studiedOperation.navigate(chatId, messageId, callData)
-                NOTIFICATIONS -> studiedOperation.navigate(chatId, messageId, callData)
-            }
-        } else
-            EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
+        val operation = objectMapper.readValue(account.operationData, OperationData::class.java)
+                ?: return EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
 
+        return when (operation.operationType) {
+            STUDIED.title -> studiedOperationService.execute(chatId, messageId, callData, operation.value, account.login, account.accessToken)
+            NOTIFICATIONS.title -> studiedOperationService.execute(chatId, messageId, callData, operation.value, account.login, account.accessToken)
+            else -> EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
+        }
     }
 
     private fun buildMessage(chatId: Long,

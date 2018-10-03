@@ -15,12 +15,13 @@ create table if not exists users
 
 create table if not exists account
 (
-  id            serial primary key,
-  created_date  timestamp default now(),
-  login         text UNIQUE    NOT NULL,
-  access_token  text,
-  enabled_modes text           NOT NULL,
-  user_id       bigint unique  not null
+  id             serial primary key,
+  created_date   timestamp default now(),
+  login          text UNIQUE    NOT NULL,
+  access_token   text,
+  enabled_modes  text           NOT NULL,
+  operation_data text,
+  user_id        bigint unique  not null
     constraint account_user_id_fk
     references users
 );

@@ -11,6 +11,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.bots.AbsSender
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
+import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
 import org.telegram.telegrambots.meta.updateshandlers.SentCallback
 import ru.proshik.english.quizlet.telegramBot.queue.NotificationQueue
 import java.io.Serializable
@@ -41,6 +42,8 @@ class Bot(@Value("\${telegram.token}") private val token: String,
     override fun onUpdateReceived(update: Update) {
         try {
             execute(onWebHookUpdateReceived(update))
+        } catch (e: TelegramApiRequestException) {
+            LOG.warn("send message with message: ${e.message} and apiResponse: ${e.apiResponse}")
         } catch (e: Exception) {
             LOG.error("message doesn't send", e)
             sendMessage(buildErrorMessage(update))
@@ -66,7 +69,7 @@ class Bot(@Value("\${telegram.token}") private val token: String,
             //TODO investigate this behaviour
             update.hasEditedMessage() -> SendMessage()
                     .setChatId(update.message.chatId)
-                    .setText("Operation doesn't support, edited message")
+                    .setText("OperationData doesn't support, edited message")
             else -> SendMessage().setChatId(update.message.chatId).setText("unexpected operation")
         }
     }
@@ -97,7 +100,10 @@ class Bot(@Value("\${telegram.token}") private val token: String,
                     continue
                 }
 
-                val message = SendMessage().setChatId(notifyMessage.chatId).setText(notifyMessage.text)
+                val message = SendMessage()
+                        .setChatId(notifyMessage.chatId)
+                        .setText(notifyMessage.text)
+                        .setReplyMarkup(BotService.buildMainMenu())
 
                 try {
                     execute(message)
@@ -119,7 +125,7 @@ class Bot(@Value("\${telegram.token}") private val token: String,
             //TODO investigate this behaviour
             update.message.isReply -> SendMessage()
                     .setChatId(chatId)
-                    .setText("Operation doesn't support, isReply message")
+                    .setText("OperationData doesn't support, isReply message")
             update.message.isUserMessage -> botService.handleOperation(chatId, update.message.messageId, text)
             else -> SendMessage()
                     .setChatId(chatId)
@@ -141,7 +147,7 @@ class Bot(@Value("\${telegram.token}") private val token: String,
     private fun buildErrorMessage(update: Update): SendMessage {
         return SendMessage()
                 .setChatId(defineChatId(update))
-                .setText("*Oops, there's been a mistake. Please repeat a request*")
+                .setText("*Oops, there's been a mistake. Please, connect with a developer and try to repeat a request*")
                 .setParseMode(ParseMode.MARKDOWN)
     }
 

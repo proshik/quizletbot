@@ -55,6 +55,8 @@ public class Account {
     @Column(name = "enabled_modes")
     private String enabledModes;
 
+    private String operationData;
+
     @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
     private Set<Notification> notifications = new HashSet<>();
 
@@ -116,6 +118,14 @@ public class Account {
         this.notifications = notifications;
     }
 
+    public String getOperationData() {
+        return operationData;
+    }
+
+    public void setOperationData(String operationData) {
+        this.operationData = operationData;
+    }
+
     private static String getDefaultModeTypes() {
         return safeWriteModeTypes(DEFAULT_MODE_TYPES);
     }
@@ -130,6 +140,24 @@ public class Account {
             });
         } catch (IOException e) {
             throw new RuntimeException("deserialize modeTypes to map");
+        }
+    }
+
+    @Deprecated
+    public static <T> T readOperations(String operations, Class<T> clazz) {
+        try {
+            return OBJECT_MAPPER.readValue(operations, clazz);
+        } catch (IOException e) {
+            throw new RuntimeException("deserialize operationData value to class=" + clazz.getSimpleName());
+        }
+    }
+
+    @Deprecated
+    public static <T> String writeOperations(T operations, Class<?> clazz) {
+        try {
+            return OBJECT_MAPPER.writerFor(clazz).writeValueAsString(operations);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("unexpected behavior");
         }
     }
 
