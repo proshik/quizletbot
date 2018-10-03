@@ -3,6 +3,7 @@ package ru.proshik.english.quizlet.telegramBot.service.operation
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
+import ru.proshik.english.quizlet.telegramBot.model.Account
 import java.io.Serializable
 
 @Component
@@ -14,12 +15,12 @@ class NotificationOperation : Operation {
         HOUR_OF_DAY
     }
 
-    override fun init(chatId: Long): InitResult {
-        return InitResult(SendMessage().setChatId(chatId).setText("Operation doesn't implement"), false)
+    override fun init(chatId: Long, account: Account): BotApiMethod<out Serializable> {
+        return SendMessage().setChatId(chatId).setText("OperationData doesn't implement")
     }
 
-    override fun navigate(chatId: Long, messageId: Int, callData: String): BotApiMethod<out Serializable> {
-        return SendMessage().setChatId(chatId).setText("Operation doesn't implement")
+    override fun execute(chatId: Long, messageId: Int, callData: String, value: String, login: String, accessToken: String): BotApiMethod<out Serializable> {
+        return SendMessage().setChatId(chatId).setText("OperationData doesn't implement")
     }
 
 }

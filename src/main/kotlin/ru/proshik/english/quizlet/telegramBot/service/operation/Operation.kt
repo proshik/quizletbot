@@ -1,15 +1,19 @@
 package ru.proshik.english.quizlet.telegramBot.service.operation
 
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
+import ru.proshik.english.quizlet.telegramBot.model.Account
 import java.io.Serializable
-
-data class InitResult(val message: BotApiMethod<out Serializable>, val existData: Boolean)
 
 interface Operation {
 
-    fun init(chatId: Long): InitResult
+    fun init(chatId: Long, account: Account): BotApiMethod<out Serializable>
 
-    fun navigate(chatId: Long, messageId: Int, callData: String): BotApiMethod<out Serializable>
+    fun execute(chatId: Long,
+                messageId: Int,
+                callData: String,
+                value: String,
+                login: String,
+                accessToken: String): BotApiMethod<out Serializable>
 
 }
 

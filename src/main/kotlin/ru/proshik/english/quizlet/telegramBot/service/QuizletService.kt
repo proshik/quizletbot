@@ -16,11 +16,8 @@ import ru.proshik.english.quizlet.telegramBot.service.vo.Studied
 class QuizletService(private val quizletClient: QuizletClient,
                      private val accountRepository: AccountRepository) {
 
-    // TODO throw access token to that method signature
-    fun userGroups(chatId: Long): List<UserGroupsResp> {
-        val account = getAccount(chatId)
-
-        return quizletClient.userGroups(account.login, account.accessToken)
+    fun userGroups(chatId: Long, login: String, accessToken: String): List<UserGroupsResp> {
+        return quizletClient.userGroups(login, accessToken)
     }
 
     fun studiedInfo(chatId: Long,

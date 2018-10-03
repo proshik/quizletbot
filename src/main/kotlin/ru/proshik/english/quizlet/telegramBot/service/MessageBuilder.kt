@@ -12,7 +12,9 @@ class MessageBuilder {
 
     // todo replace constants to enums
     companion object {
+        // navigate by items only with paging buttons (ItemPageKeyboard)
         const val PAGING_ELEMENT = "page_elem"
+        // navigate by items with paging by items (StepPageKeyboard)
         const val PAGING_BUTTONS = "page_butt"
         const val STEPPING = "step"
 
@@ -139,7 +141,7 @@ class MessageBuilder {
         }
         rows.add(itemRows)
 
-        // add buttons to navigate
+        // add buttons to execute
         val navigationRow = ArrayList<InlineKeyboardButton>()
         if (items.size in 5..8) {
             if (firstElemInGroup < 5) {
