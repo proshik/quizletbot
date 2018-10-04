@@ -2,6 +2,7 @@ package ru.proshik.english.quizlet.telegramBot.service.operation
 
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import ru.proshik.english.quizlet.telegramBot.model.Account
+import ru.proshik.english.quizlet.telegramBot.service.vo.OperationData
 import java.io.Serializable
 
 interface Operation {
@@ -11,9 +12,8 @@ interface Operation {
     fun execute(chatId: Long,
                 messageId: Int,
                 callData: String,
-                value: String,
-                login: String,
-                accessToken: String): BotApiMethod<out Serializable>
+                value: OperationData,
+                account: Account): BotApiMethod<out Serializable>
 
 }
 

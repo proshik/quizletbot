@@ -12,13 +12,10 @@ import ru.proshik.english.quizlet.telegramBot.repository.AccountRepository
 import ru.proshik.english.quizlet.telegramBot.service.BotService
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder.Companion.ALL_ITEMS
-import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder.Companion.PAGING_BUTTONS
 import ru.proshik.english.quizlet.telegramBot.service.QuizletService
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperationService.StepType.*
-import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType
-import ru.proshik.english.quizlet.telegramBot.service.vo.OperationData
-import ru.proshik.english.quizlet.telegramBot.service.vo.SetStat
-import ru.proshik.english.quizlet.telegramBot.service.vo.Studied
+import ru.proshik.english.quizlet.telegramBot.service.vo.*
+import ru.proshik.english.quizlet.telegramBot.service.vo.NavigateType.*
 import java.io.Serializable
 import java.util.concurrent.ConcurrentHashMap
 
@@ -48,11 +45,13 @@ class StudiedOperationService(val quizletService: QuizletService,
 
     private val operationResultStore = ConcurrentHashMap<Long, OperationResult>()
 
+    private val accountContext: (account: Account) -> AccountContext = { AccountContext(it.login, it.accessToken) }
+
     override fun init(chatId: Long, account: Account): BotApiMethod<out Serializable> {
         stepStore.remove(chatId)
         operationResultStore.remove(chatId)
 
-        val userGroups = quizletService.userGroups(chatId, account.login, account.accessToken)
+        val userGroups = quizletService.userGroups(chatId, accountContext(account))
 
         //TODO do refactoring that ugly code
         val text: String
@@ -79,11 +78,13 @@ class StudiedOperationService(val quizletService: QuizletService,
         }
 
         return if (outputData.isNotEmpty()) {
-            // save info into db about active operation
-            account.operationData = objectMapper.writeValueAsString(OperationData(BotService.MainMenu.STUDIED.title, "value"))
-            accountRepository.save(account)
             // save information about active step
             stepStore[chatId] = ActiveStep(stepType, userGroups, groupId)
+            // save info into db about active operation
+            val value = objectMapper.writeValueAsString(StudiedOperationInfo(stepType, userGroups))
+            account.operationData = objectMapper.writeValueAsString(OperationData(BotService.MainMenu.STUDIED.title, value))
+            accountRepository.save(account)
+
             // build text message with keyboard
             messageFormatter.buildStepPageKeyboardMessage(chatId, text, outputData)
         } else {
@@ -94,33 +95,39 @@ class StudiedOperationService(val quizletService: QuizletService,
     override fun execute(chatId: Long,
                          messageId: Int,
                          callData: String,
-                         value: String,
-                         login: String,
-                         accessToken: String): BotApiMethod<out Serializable> {
+                         operationData: OperationData,
+                         account: Account): BotApiMethod<out Serializable> {
 
-        // todo finish that
-//        val (command, value) = callData.split(";")
-//
-//        when (command) {
-//            MessageBuilder.PAGING_ELEMENT -> {}
-//            MessageBuilder.PAGING_BUTTONS -> {}
-//        }
+        val (navigateTypeName, data) = callData.split(";")
+
+        val navigateType = NavigateType.values().firstOrNull { it.name == navigateTypeName }
+                ?: throw RuntimeException("unexpected navigateType=$navigateTypeName")
+
         val activeStep = stepStore[chatId] ?: return buildCleanEditMessage(chatId, messageId)
 
+//        operationData
+//
+//        when (navigateType) {
+//
+//            PAGING_BY_ITEM -> TODO()
+//            PAGING_BY_BUTTON -> TODO()
+//            NEXT_STEP -> TODO()
+//        }
+
         return when (activeStep.stepType) {
-            GROUP -> handleSelectGroup(chatId, messageId, callData, activeStep)
+            GROUP -> handleSelectGroup(chatId, messageId, callData, navigateType, activeStep)
 
-            SET -> handleSelectSet(chatId, messageId, callData, activeStep)
+            SET -> handleSelectSet(chatId, messageId, callData, navigateType, activeStep, account)
 
-            RESULT -> handleSelectResult(chatId, messageId, callData, activeStep)
+            RESULT -> handleSelectResult(chatId, messageId, callData, navigateType)
         }
     }
 
-    private fun handleSelectGroup(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): BotApiMethod<out Serializable> {
+    fun handleSelectGroup(chatId: Long, messageId: Int, callData: String, navigateType: NavigateType, activeStep: ActiveStep): BotApiMethod<out Serializable> {
         val (command, value) = callData.split(";")
 
-        when (command) {
-            MessageBuilder.STEPPING -> {
+        when (navigateType) {
+            NEXT_STEP -> {
                 val group = activeStep.userGroups.asSequence()
                         .filter { it.id.toString() == value }
                         .firstOrNull()
@@ -154,7 +161,7 @@ class StudiedOperationService(val quizletService: QuizletService,
 
                 return message
             }
-            PAGING_BUTTONS -> TODO() // need to implement when groups (classes) will be include more than 4 items
+            PAGING_BY_BUTTON -> TODO() // need to implement when groups (classes) will be include more than 4 items
             else -> return buildCleanKeyboardMessage(chatId, messageId)
         }
     }
@@ -162,27 +169,14 @@ class StudiedOperationService(val quizletService: QuizletService,
     private fun handleSelectSet(chatId: Long,
                                 messageId: Int,
                                 callData: String,
-                                activeStep: ActiveStep): BotApiMethod<out Serializable> {
+                                navigateType: NavigateType,
+                                activeStep: ActiveStep,
+                                account: Account): BotApiMethod<out Serializable> {
         val (command, value) = callData.split(";")
 
-        return when (command) {
-            // paging by result
-            // TODO extract to RESULT step
-            MessageBuilder.PAGING_ELEMENT -> {
-                val operationResult = operationResultStore[chatId]
-                        ?: throw RuntimeException("not available command=\"$command\" for step")
-
-                val countOfItems = operationResult.studied.setsStats.size
-                val selectedItem = value.toInt()
-
-                val text = createMessageText(operationResult.studied.groupName, operationResult.studied.setsStats[selectedItem - 1])
-
-                operationResultStore[chatId] = OperationResult(operationResult.studied)
-
-                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, countOfItems, selectedItem)
-            }
+        return when (navigateType) {
             // select next step or another varieties of elements
-            MessageBuilder.STEPPING -> {
+            NEXT_STEP -> {
                 if (operationResultStore[chatId] != null) {
                     operationResultStore.remove(chatId)
                 }
@@ -202,15 +196,18 @@ class StudiedOperationService(val quizletService: QuizletService,
 
                 if (setIds.isEmpty()) return buildCleanEditMessage(chatId, messageId)
 
-                val statistics = quizletService.studiedInfo(chatId, group.id, setIds, activeStep.userGroups)
+                val statistics = quizletService.studiedInfo(chatId, group.id, setIds, activeStep.userGroups, accountContext(account))
+
+                stepStore[chatId] = ActiveStep(RESULT, activeStep.userGroups, group.id)
 
                 operationResultStore[chatId] = OperationResult(statistics)
 
+                // build text message for first element
                 val text = createMessageText(statistics.groupName, statistics.setsStats[0])
 
                 messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, statistics.setsStats.size)
             }
-            MessageBuilder.PAGING_BUTTONS -> {
+            PAGING_BY_BUTTON -> {
                 val iterableStep = stepStore[chatId] ?: return buildCleanEditMessage(chatId, messageId)
 
                 val group = iterableStep.userGroups.asSequence()
@@ -231,8 +228,25 @@ class StudiedOperationService(val quizletService: QuizletService,
         }
     }
 
-    private fun handleSelectResult(chatId: Long, messageId: Int, callData: String, activeStep: ActiveStep): BotApiMethod<out Serializable> {
-        TODO("not implemented") //To change body of created functions use File | Settings | File Templates.
+    private fun handleSelectResult(chatId: Long, messageId: Int, callData: String, navigateType: NavigateType): BotApiMethod<out Serializable> {
+        val (command, value) = callData.split(";")
+        // paging by result
+        return when (navigateType) {
+            PAGING_BY_ITEM -> {
+                val operationResult = operationResultStore[chatId]
+                        ?: throw RuntimeException("not available command=\"$command\" for step")
+
+                val countOfItems = operationResult.studied.setsStats.size
+                val selectedItem = value.toInt()
+
+                val text = createMessageText(operationResult.studied.groupName, operationResult.studied.setsStats[selectedItem - 1])
+
+                operationResultStore[chatId] = OperationResult(operationResult.studied)
+
+                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, countOfItems, selectedItem)
+            }
+            else -> return buildCleanKeyboardMessage(chatId, messageId)
+        }
     }
 
     private fun buildCleanEditMessage(chatId: Long, messageId: Int): BotApiMethod<out Serializable> {
@@ -282,7 +296,6 @@ class StudiedOperationService(val quizletService: QuizletService,
             }
         }
         res.append("\nURL: ${set.url}")
-//        res.append("\n")
 
         return res.toString()
     }

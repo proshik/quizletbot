@@ -7,26 +7,22 @@ import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
 import ru.proshik.english.quizlet.telegramBot.model.Account
 import ru.proshik.english.quizlet.telegramBot.repository.AccountRepository
-import ru.proshik.english.quizlet.telegramBot.service.vo.ModeStat
-import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType
-import ru.proshik.english.quizlet.telegramBot.service.vo.SetStat
-import ru.proshik.english.quizlet.telegramBot.service.vo.Studied
+import ru.proshik.english.quizlet.telegramBot.service.vo.*
 
 @Service
 class QuizletService(private val quizletClient: QuizletClient,
                      private val accountRepository: AccountRepository) {
 
-    fun userGroups(chatId: Long, login: String, accessToken: String): List<UserGroupsResp> {
-        return quizletClient.userGroups(login, accessToken)
+    fun userGroups(chatId: Long, accountContext: AccountContext): List<UserGroupsResp> {
+        return quizletClient.userGroups(accountContext.login, accountContext.accessToken)
     }
 
     fun studiedInfo(chatId: Long,
                     groupId: Long,
                     setIds: List<Long>,
-                    userGroups: List<UserGroupsResp>): Studied {
-        val account = getAccount(chatId)
-
-        val userStudied = quizletClient.userStudied(account.login, account.accessToken)
+                    userGroups: List<UserGroupsResp>,
+                    accountContext: AccountContext): Studied {
+        val userStudied = quizletClient.userStudied(accountContext.login, accountContext.accessToken)
 
         val pair = userGroups.asSequence()
                 .filter { groupId == it.id }

@@ -20,7 +20,7 @@ create table if not exists account
   login          text UNIQUE    NOT NULL,
   access_token   text,
   enabled_modes  text           NOT NULL,
-  operation_data text,
+  operation_data jsonb,
   user_id        bigint unique  not null
     constraint account_user_id_fk
     references users
