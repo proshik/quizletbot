@@ -4,11 +4,20 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.hibernate.annotations.GenericGenerator;
+import com.vladmihalcea.hibernate.type.array.IntArrayType;
+import com.vladmihalcea.hibernate.type.array.StringArrayType;
+import com.vladmihalcea.hibernate.type.json.JsonBinaryType;
+import com.vladmihalcea.hibernate.type.json.JsonNodeBinaryType;
+import com.vladmihalcea.hibernate.type.json.JsonNodeStringType;
+import com.vladmihalcea.hibernate.type.json.JsonStringType;
+import org.hibernate.annotations.*;
 import org.hibernate.annotations.Parameter;
 import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType;
 
+import javax.persistence.CascadeType;
 import javax.persistence.*;
+import javax.persistence.Entity;
+import javax.persistence.Table;
 import java.io.IOException;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
@@ -21,6 +30,13 @@ import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
 @Entity
 @Table(name = "account")
+@TypeDefs({
+        @TypeDef(name = "string-array", typeClass = StringArrayType.class),
+        @TypeDef(name = "int-array", typeClass = IntArrayType.class),
+        @TypeDef(name = "json", typeClass = JsonStringType.class),
+        @TypeDef(name = "jsonb", typeClass = JsonBinaryType.class),
+        @TypeDef(name = "jsonb-node", typeClass = JsonNodeBinaryType.class),
+        @TypeDef(name = "json-node", typeClass = JsonNodeStringType.class)})
 public class Account {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
@@ -55,6 +71,8 @@ public class Account {
     @Column(name = "enabled_modes")
     private String enabledModes;
 
+    @Type(type = "jsonb")
+    @Column(columnDefinition = "json")
     private String operationData;
 
     @OneToMany(mappedBy = "account", cascade = {CascadeType.PERSIST, CascadeType.MERGE})

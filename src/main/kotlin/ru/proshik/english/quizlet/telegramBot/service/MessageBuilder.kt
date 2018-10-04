@@ -6,17 +6,12 @@ import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageRe
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.InlineKeyboardMarkup
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.InlineKeyboardButton
+import ru.proshik.english.quizlet.telegramBot.service.vo.NavigateType.*
 import java.io.Serializable
 
 class MessageBuilder {
 
-    // todo replace constants to enums
     companion object {
-        // navigate by items only with paging buttons (ItemPageKeyboard)
-        const val PAGING_ELEMENT = "page_elem"
-        // navigate by items with paging by items (StepPageKeyboard)
-        const val PAGING_BUTTONS = "page_butt"
-        const val STEPPING = "step"
 
         const val ALL_ITEMS = "-1"
     }
@@ -116,7 +111,7 @@ class MessageBuilder {
         // check and add the first line with a title "All items"
         if (showAllLine && items.size > 1) {
             val allElementRow = ArrayList<InlineKeyboardButton>()
-            allElementRow.add(InlineKeyboardButton().setText("All items").setCallbackData("$STEPPING;$ALL_ITEMS"))
+            allElementRow.add(InlineKeyboardButton().setText("All items").setCallbackData("$NEXT_STEP;$ALL_ITEMS"))
             rows.add(allElementRow)
         }
 
@@ -129,7 +124,7 @@ class MessageBuilder {
             items.subList(firstElemInGroup - 1, firstElemInGroup + 3)
         } else items
         for (item in iterableItems) {
-            itemRows.add(InlineKeyboardButton().setText(item.first).setCallbackData("$STEPPING;${item.second}"))
+            itemRows.add(InlineKeyboardButton().setText(item.first).setCallbackData("$NEXT_STEP;${item.second}"))
 
             if (i % itemInRow == 0) {
                 rows.add(itemRows)
@@ -145,31 +140,31 @@ class MessageBuilder {
         val navigationRow = ArrayList<InlineKeyboardButton>()
         if (items.size in 5..8) {
             if (firstElemInGroup < 5) {
-                navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BUTTONS;1"))
-                navigationRow.add(InlineKeyboardButton().setText("5-${items.size}").setCallbackData("$PAGING_BUTTONS;5"))
+                navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BY_BUTTON;1"))
+                navigationRow.add(InlineKeyboardButton().setText("5-${items.size}").setCallbackData("$PAGING_BY_BUTTON;5"))
             } else {
-                navigationRow.add(InlineKeyboardButton().setText("1-4").setCallbackData("$PAGING_BUTTONS;1"))
-                navigationRow.add(InlineKeyboardButton().setText("·5-${items.size}·").setCallbackData("$PAGING_BUTTONS;5"))
+                navigationRow.add(InlineKeyboardButton().setText("1-4").setCallbackData("$PAGING_BY_BUTTON;1"))
+                navigationRow.add(InlineKeyboardButton().setText("·5-${items.size}·").setCallbackData("$PAGING_BY_BUTTON;5"))
             }
         } else if (items.size > 8) {
             when (firstElemInGroup) {
                 1 -> {
-                    navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BUTTONS;1"))
-                    navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BUTTONS;5"))
+                    navigationRow.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$PAGING_BY_BUTTON;1"))
+                    navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BY_BUTTON;5"))
                 }
                 in items.size - 4..items.size -> {
-                    navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BUTTONS;${firstElemInGroup - 4}"))
+                    navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BY_BUTTON;${firstElemInGroup - 4}"))
                     val text = if (firstElemInGroup == items.size) {
                         "$firstElemInGroup"
                     } else {
                         "$firstElemInGroup-${items.size}"
                     }
-                    navigationRow.add(InlineKeyboardButton().setText("·$text·").setCallbackData("$PAGING_BUTTONS;$firstElemInGroup"))
+                    navigationRow.add(InlineKeyboardButton().setText("·$text·").setCallbackData("$PAGING_BY_BUTTON;$firstElemInGroup"))
                 }
                 else -> {
-                    navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BUTTONS;${firstElemInGroup - 4}"))
-                    navigationRow.add(InlineKeyboardButton().setText("·$firstElemInGroup-${firstElemInGroup + 3}·").setCallbackData("$PAGING_BUTTONS;$firstElemInGroup"))
-                    navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BUTTONS;${firstElemInGroup + 4}"))
+                    navigationRow.add(InlineKeyboardButton().setText("Prev").setCallbackData("$PAGING_BY_BUTTON;${firstElemInGroup - 4}"))
+                    navigationRow.add(InlineKeyboardButton().setText("·$firstElemInGroup-${firstElemInGroup + 3}·").setCallbackData("$PAGING_BY_BUTTON;$firstElemInGroup"))
+                    navigationRow.add(InlineKeyboardButton().setText("Next").setCallbackData("$PAGING_BY_BUTTON;${firstElemInGroup + 4}"))
                 }
             }
         }
@@ -190,46 +185,46 @@ class MessageBuilder {
 
         if (countOfItems > 5) {
             if (selectedItem > 3 && selectedItem < (countOfItems - 2)) {
-                numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$PAGING_ELEMENT;1"))
-                numberRow.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$PAGING_ELEMENT;${selectedItem - 1}"))
-                numberRow.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$PAGING_ELEMENT;$selectedItem"))
-                numberRow.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$PAGING_ELEMENT;${selectedItem + 1}"))
-                numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$PAGING_ELEMENT;$countOfItems"))
+                numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$PAGING_BY_ITEM;1"))
+                numberRow.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$PAGING_BY_ITEM;${selectedItem - 1}"))
+                numberRow.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$PAGING_BY_ITEM;$selectedItem"))
+                numberRow.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$PAGING_BY_ITEM;${selectedItem + 1}"))
+                numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$PAGING_BY_ITEM;$countOfItems"))
             } else {
                 if (selectedItem < 4) {
                     if (selectedItem == 1) {
-                        numberRow.add(InlineKeyboardButton().setText("·1·").setCallbackData("$PAGING_ELEMENT;1"))
+                        numberRow.add(InlineKeyboardButton().setText("·1·").setCallbackData("$PAGING_BY_ITEM;1"))
                     } else {
-                        numberRow.add(InlineKeyboardButton().setText("1").setCallbackData("$PAGING_ELEMENT;1"))
+                        numberRow.add(InlineKeyboardButton().setText("1").setCallbackData("$PAGING_BY_ITEM;1"))
                     }
                     for (item in 2..4) {
                         if (selectedItem == item) {
-                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$PAGING_ELEMENT;$item"))
+                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$PAGING_BY_ITEM;$item"))
                         } else {
-                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$PAGING_ELEMENT;$item"))
+                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$PAGING_BY_ITEM;$item"))
                         }
                     }
-                    numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$PAGING_ELEMENT;$countOfItems"))
+                    numberRow.add(InlineKeyboardButton().setText("$countOfItems>>").setCallbackData("$PAGING_BY_ITEM;$countOfItems"))
                 } else {
-                    numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$PAGING_ELEMENT;1"))
+                    numberRow.add(InlineKeyboardButton().setText("<<1").setCallbackData("$PAGING_BY_ITEM;1"))
                     for (item in countOfItems - 3 until countOfItems) {
                         if (selectedItem == item) {
-                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$PAGING_ELEMENT;$item"))
+                            numberRow.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$PAGING_BY_ITEM;$item"))
                         } else {
-                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$PAGING_ELEMENT;$item"))
+                            numberRow.add(InlineKeyboardButton().setText("$item").setCallbackData("$PAGING_BY_ITEM;$item"))
                         }
                     }
                     if (selectedItem == countOfItems) {
-                        numberRow.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$PAGING_ELEMENT;$countOfItems"))
+                        numberRow.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$PAGING_BY_ITEM;$countOfItems"))
                     } else {
-                        numberRow.add(InlineKeyboardButton().setText("$countOfItems").setCallbackData("$PAGING_ELEMENT;$countOfItems"))
+                        numberRow.add(InlineKeyboardButton().setText("$countOfItems").setCallbackData("$PAGING_BY_ITEM;$countOfItems"))
                     }
                 }
             }
         } else {
             for (item in 1..countOfItems) {
                 val title = if (selectedItem == item) "·$item·" else "$item"
-                numberRow.add(InlineKeyboardButton().setText(title).setCallbackData("$PAGING_ELEMENT;$item"))
+                numberRow.add(InlineKeyboardButton().setText(title).setCallbackData("$PAGING_BY_ITEM;$item"))
             }
         }
 

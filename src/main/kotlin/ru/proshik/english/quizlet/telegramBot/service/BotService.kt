@@ -150,7 +150,7 @@ class BotService(private val studiedOperationService: StudiedOperationService,
                         if (accountRepository.findAccountByUserChatId(chatId) != null) buildMainMenu()
                         else buildAuthorizeMenu()
 
-                buildMessage(chatId, "Unknown operation. Please, use a keyboard buttons", keyboard, messageId)
+                buildMessage(chatId, "Unknown operation. Please, use a keyboard buttons.", keyboard, messageId)
             }
         }
     }
@@ -164,8 +164,8 @@ class BotService(private val studiedOperationService: StudiedOperationService,
                 ?: return EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
 
         return when (operation.operationType) {
-            STUDIED.title -> studiedOperationService.execute(chatId, messageId, callData, operation.value, account.login, account.accessToken)
-            NOTIFICATIONS.title -> studiedOperationService.execute(chatId, messageId, callData, operation.value, account.login, account.accessToken)
+            STUDIED.title -> studiedOperationService.execute(chatId, messageId, callData, operation, account)
+            NOTIFICATIONS.title -> studiedOperationService.execute(chatId, messageId, callData, operation, account)
             else -> EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
         }
     }
