@@ -1,17 +1,50 @@
 package ru.proshik.english.quizlet.telegramBot.model;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import org.hibernate.annotations.GenericGenerator;
 import org.hibernate.annotations.Parameter;
+import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType;
 
 import javax.persistence.*;
+import java.io.IOException;
 import java.time.ZonedDateTime;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 import static javax.persistence.GenerationType.SEQUENCE;
 import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
 @Entity
 @Table(name = "users")
+//@TypeDefs({
+//        @TypeDef(name = "string-array", typeClass = StringArrayType.class),
+//        @TypeDef(name = "int-array", typeClass = IntArrayType.class),
+//        @TypeDef(name = "json", typeClass = JsonStringType.class),
+//        @TypeDef(name = "jsonb", typeClass = JsonBinaryType.class),
+//        @TypeDef(name = "jsonb-node", typeClass = JsonNodeBinaryType.class),
+//        @TypeDef(name = "json-node", typeClass = JsonNodeStringType.class)})
 public class User {
+
+    private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+
+    private static Map<ModeType, Boolean> DEFAULT_MODE_TYPES = new HashMap<>();
+
+    static {
+        OBJECT_MAPPER.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+
+        DEFAULT_MODE_TYPES.put(ModeType.LEARN, true);
+        DEFAULT_MODE_TYPES.put(ModeType.FLASHCARDS, true);
+        DEFAULT_MODE_TYPES.put(ModeType.WRITE, true);
+        DEFAULT_MODE_TYPES.put(ModeType.SPELL, true);
+        DEFAULT_MODE_TYPES.put(ModeType.TEST, true);
+        DEFAULT_MODE_TYPES.put(ModeType.MATCH, true);
+        DEFAULT_MODE_TYPES.put(ModeType.GRAVITY, false);
+    }
 
     @Id
     @GeneratedValue(strategy = SEQUENCE, generator = "users_id_seq")
@@ -25,21 +58,28 @@ public class User {
     @Column(name = "chat_id", nullable = false)
     private Long chatId;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
-    private Account account;
+    private String login;
+
+    private String accessToken;
+
+//    @Column(name = "enabled_modes")
+//    private String enabledModes;
+
+//    @Type(type = "jsonb")
+//    @Column(columnDefinition = "json")
+//    private String operationData;
+
+//    @OneToMany(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
+//    private Set<Notification> notifications = new HashSet<>();
 
     public User() {
     }
 
-    public User(ZonedDateTime createdDate, Long chatId) {
+    public User(ZonedDateTime createdDate, Long chatId, String login, String accessToken) {
         this.createdDate = createdDate;
         this.chatId = chatId;
-    }
-
-    public User(ZonedDateTime createdDate, Long chatId, Account account) {
-        this.createdDate = createdDate;
-        this.chatId = chatId;
-        this.account = account;
+        this.login = login;
+        this.accessToken = accessToken;
     }
 
     public Long getId() {
@@ -54,18 +94,56 @@ public class User {
         return chatId;
     }
 
-    public Account getAccount() {
-        return account;
+    public String getLogin() {
+        return login;
     }
 
-    public void setAccount(Account account) {
-        if (account == null) {
-            if (this.account != null) {
-                this.account.setUser(null);
-            }
-        } else {
-            account.setUser(this);
+    public String getAccessToken() {
+        return accessToken;
+    }
+
+//    public Set<Notification> getNotifications() {
+//        return notifications;
+//    }
+
+    public void setCreatedDate(ZonedDateTime createdDate) {
+        this.createdDate = createdDate;
+    }
+
+    public void setChatId(Long chatId) {
+        this.chatId = chatId;
+    }
+
+    public void setLogin(String login) {
+        this.login = login;
+    }
+
+    public void setAccessToken(String accessToken) {
+        this.accessToken = accessToken;
+    }
+
+//    public void setNotifications(Set<Notification> notifications) {
+//        this.notifications = notifications;
+//    }
+
+    public static String writeEnabledModeTypes(Map<ModeType, Boolean> enabledModeTypes) {
+        return safeWriteModeTypes(enabledModeTypes);
+    }
+
+    public static Map<ModeType, Boolean> readEnablesModeTypes(String modeTypes) {
+        try {
+            return OBJECT_MAPPER.readValue(modeTypes, new TypeReference<HashMap<ModeType, Boolean>>() {
+            });
+        } catch (IOException e) {
+            throw new RuntimeException("deserialize modeTypes to map");
         }
-        this.account = account;
+    }
+
+    private static String safeWriteModeTypes(Map<ModeType, Boolean> modeTypes) {
+        try {
+            return OBJECT_MAPPER.writerWithDefaultPrettyPrinter().writeValueAsString(modeTypes);
+        } catch (JsonProcessingException e) {
+            throw new RuntimeException("unexpected behavior");
+        }
     }
 }

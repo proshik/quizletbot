@@ -5,24 +5,21 @@ import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.dto.SetResp
 import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
-import ru.proshik.english.quizlet.telegramBot.model.Account
-import ru.proshik.english.quizlet.telegramBot.repository.AccountRepository
 import ru.proshik.english.quizlet.telegramBot.service.vo.*
 
 @Service
-class QuizletService(private val quizletClient: QuizletClient,
-                     private val accountRepository: AccountRepository) {
+class QuizletService(private val quizletClient: QuizletClient) {
 
-    fun userGroups(chatId: Long, accountContext: AccountContext): List<UserGroupsResp> {
-        return quizletClient.userGroups(accountContext.login, accountContext.accessToken)
+    fun userGroups(chatId: Long, userContext: UserContext): List<UserGroupsResp> {
+        return quizletClient.userGroups(userContext.login, userContext.accessToken)
     }
 
     fun studiedInfo(chatId: Long,
                     groupId: Long,
                     setIds: List<Long>,
                     userGroups: List<UserGroupsResp>,
-                    accountContext: AccountContext): Studied {
-        val userStudied = quizletClient.userStudied(accountContext.login, accountContext.accessToken)
+                    userContext: UserContext): Studied {
+        val userStudied = quizletClient.userStudied(userContext.login, userContext.accessToken)
 
         val pair = userGroups.asSequence()
                 .filter { groupId == it.id }
@@ -51,8 +48,5 @@ class QuizletService(private val quizletClient: QuizletClient,
         return ModeType.modeTypeByDesignation(mode)
     }
 
-    private fun getAccount(chatId: Long): Account {
-        return accountRepository.findAccountByUserChatId(chatId) ?: throw RuntimeException("unexpected behaviour")
-    }
 
 }

@@ -11,8 +11,8 @@ import java.time.ZonedDateTime;
 import static javax.persistence.GenerationType.SEQUENCE;
 import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 
-@Entity
-@Table(name = "notification")
+//@Entity
+//@Table(name = "notification")
 public class Notification {
 
     @Id
@@ -34,8 +34,8 @@ public class Notification {
     private int hour;
 
     @ManyToOne
-    @JoinColumn(name = "account_id")
-    private Account account;
+    @JoinColumn(name = "user_id")
+    private User user;
 
     public Notification() {
     }
@@ -67,11 +67,4 @@ public class Notification {
         return hour;
     }
 
-    public Account getAccount() {
-        return account;
-    }
-
-    public void setAccount(Account account) {
-        this.account = account;
-    }
 }

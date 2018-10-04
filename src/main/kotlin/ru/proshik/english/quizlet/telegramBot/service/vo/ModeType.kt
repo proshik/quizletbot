@@ -12,6 +12,7 @@ enum class ModeType(val title: String,
     GRAVITY("Gravity", listOf("gravity"));
 
     companion object {
+
         fun allDesignations(): List<String> {
             return ModeType.values()
                     .flatMap { modeType -> modeType.designations }
