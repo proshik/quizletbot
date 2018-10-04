@@ -6,7 +6,6 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.exception.AuthenticationException
-import ru.proshik.english.quizlet.telegramBot.model.Account
 import ru.proshik.english.quizlet.telegramBot.model.User
 import ru.proshik.english.quizlet.telegramBot.queue.NotificationQueue
 import ru.proshik.english.quizlet.telegramBot.queue.Queue
@@ -46,36 +45,26 @@ class AuthenticationService(private val quizletClient: QuizletClient,
         // sent request to quizlet
         val authorization = quizletClient.accessToken(code)
         // save access_token to DB
-        val user = usersRepository.findByChatId(chatId) ?: throw AuthenticationException("user doesn't find")
-        if (user.account != null) {
-            // update access token for account
-            user.account.accessToken = authorization.accessToken
-        } else {
+        var user = usersRepository.findByChatId(chatId)
+        if (user == null) {
             // create account
-            val account = Account(ZonedDateTime.now(), authorization.userId, authorization.accessToken)
-            user.account = account
+            user = User(ZonedDateTime.now(), chatId, authorization.userId, authorization.accessToken)
+        } else {
+            // update an user login and access token
+            user.login = authorization.userId
+            user.accessToken = authorization.accessToken
         }
-        // save or update an user
         usersRepository.save(user)
         // delete state from im-memory map with states
         stateRepository.delete(state)
         // push conformation message to queue for notify an user telegram bot
-        val text = "The Quizlet account for user with login ${user.account.login} was added!"
+        val text = "The Quizlet account for user with login ${user.login} was added!"
         notificationQueue.put(Queue.Message(chatId, text))
 
         LOG.info("success authenticate account=${authorization.userId} user=${user.id}")
     }
 
-    fun connectToQuizlet(chatId: Long): String {
-        val user = usersRepository.findByChatId(chatId)
-        if (user == null) {
-            usersRepository.save(User(ZonedDateTime.now(), chatId))
-        }
-
-        return generateAuthUrl(chatId)
-    }
-
-    private fun generateAuthUrl(chatId: Long): String {
+    fun generateAuthUrl(chatId: Long): String {
         val state = stateRepository.add(chatId)
         return buildAuthUrl(state)
     }

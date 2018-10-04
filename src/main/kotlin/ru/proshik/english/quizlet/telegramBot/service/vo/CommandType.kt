@@ -9,6 +9,7 @@ enum class CommandType(val title: String) {
     REVOKE_AUTH("/revoke-auth");
 
     companion object {
+
         fun getByName(text: String): CommandType? = values().firstOrNull { it.title == text }
     }
 
