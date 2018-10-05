@@ -4,23 +4,17 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import org.hibernate.annotations.GenericGenerator;
-import org.hibernate.annotations.Parameter;
+import org.springframework.data.annotation.Id;
 import ru.proshik.english.quizlet.telegramBot.service.vo.ModeType;
 
-import javax.persistence.*;
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.time.ZonedDateTime;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
-import java.util.Set;
 
-import static javax.persistence.GenerationType.SEQUENCE;
-import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
-
-@Entity
-@Table(name = "users")
+//@Entity
+//@Table(name = "users")
 //@TypeDefs({
 //        @TypeDef(name = "string-array", typeClass = StringArrayType.class),
 //        @TypeDef(name = "int-array", typeClass = IntArrayType.class),
@@ -28,7 +22,7 @@ import static org.hibernate.id.enhanced.SequenceStyleGenerator.SEQUENCE_PARAM;
 //        @TypeDef(name = "jsonb", typeClass = JsonBinaryType.class),
 //        @TypeDef(name = "jsonb-node", typeClass = JsonNodeBinaryType.class),
 //        @TypeDef(name = "json-node", typeClass = JsonNodeStringType.class)})
-public class User {
+public class Users {
 
     private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
 
@@ -47,15 +41,15 @@ public class User {
     }
 
     @Id
-    @GeneratedValue(strategy = SEQUENCE, generator = "users_id_seq")
-    @GenericGenerator(name = "users_id_seq",
-            strategy = "enhanced-sequence",
-            parameters = @Parameter(name = SEQUENCE_PARAM, value = "users_id_seq"))
+//    @GeneratedValue(strategy = SEQUENCE, generator = "users_id_seq")
+//    @GenericGenerator(name = "users_id_seq",
+//            strategy = "enhanced-sequence",
+//            parameters = @Parameter(name = SEQUENCE_PARAM, value = "users_id_seq"))
     private Long id;
 
-    private ZonedDateTime createdDate;
+//    private LocalDateTime createdDate;
 
-    @Column(name = "chat_id", nullable = false)
+    //    @Column(name = "chat_id", nullable = false)
     private Long chatId;
 
     private String login;
@@ -72,11 +66,11 @@ public class User {
 //    @OneToMany(mappedBy = "user", cascade = {CascadeType.PERSIST, CascadeType.MERGE})
 //    private Set<Notification> notifications = new HashSet<>();
 
-    public User() {
+    public Users() {
     }
 
-    public User(ZonedDateTime createdDate, Long chatId, String login, String accessToken) {
-        this.createdDate = createdDate;
+    public Users(Long chatId, String login, String accessToken) {
+//        this.createdDate = createdDate;
         this.chatId = chatId;
         this.login = login;
         this.accessToken = accessToken;
@@ -86,9 +80,9 @@ public class User {
         return id;
     }
 
-    public ZonedDateTime getCreatedDate() {
-        return createdDate;
-    }
+//    public LocalDateTime getCreatedDate() {
+//        return createdDate;
+//    }
 
     public Long getChatId() {
         return chatId;
@@ -105,10 +99,6 @@ public class User {
 //    public Set<Notification> getNotifications() {
 //        return notifications;
 //    }
-
-    public void setCreatedDate(ZonedDateTime createdDate) {
-        this.createdDate = createdDate;
-    }
 
     public void setChatId(Long chatId) {
         this.chatId = chatId;

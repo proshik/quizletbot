@@ -6,7 +6,7 @@ import org.springframework.context.annotation.Configuration
 import org.telegram.telegrambots.bots.DefaultBotOptions
 
 @Configuration
-class TelegramBotConfig(@Value("\${telegram.max_threads}") private val maxThreads: Int) {
+class TelegramBotConfig(@Value("\${telegram.max-threads}") private val maxThreads: Int) {
 
     @Bean
     fun defaultBotOptions(): DefaultBotOptions {

@@ -1,0 +1,25 @@
+sudo: required
+
+language: java
+jdk: oraclejdk8
+
+addons:
+  apt:
+    packages:
+    - docker-ce
+
+script:
+- mvn clean test -B
+- echo "$DOCKER_PASS" | docker login -u "$DOCKER_USER" --password-stdin
+
+after_success:
+- bash <(curl -s https://codecov.io/bash)
+
+# TAG
+- export TAG=`if [ "$TRAVIS_BRANCH" == "master" ]; then echo "latest"; else echo $TRAVIS_BRANCH ; fi`
+- export QUIZLETBOT=proshik/quizletbot
+- export COMMIT=${TRAVIS_COMMIT::7}
+
+- docker build -t $QUIZLETBOT:$COMMIT .
+- docker tag $QUIZLETBOT:$COMMIT $QUIZLETBOT:$TAG
+- docker push $QUIZLETBOT:$TAG

@@ -160,7 +160,7 @@ class BotService(private val usersRepository: UsersRepository,
 //                        .setMessageId(messageId)
 //                        .setReplyMarkup(null)
 
-        return studiedOperation.execute(chatId, messageId, callData, user);
+        return studiedOperation.execute(chatId, messageId, callData, user)
 
 //        return when (operation.operationType) {
 //            STUDIED.title -> studiedOperation.execute(chatId, messageId, callData, user)

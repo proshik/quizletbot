@@ -7,7 +7,7 @@ import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageReplyMarkup
 import org.telegram.telegrambots.meta.api.methods.updatingmessages.EditMessageText
 import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
-import ru.proshik.english.quizlet.telegramBot.model.User
+import ru.proshik.english.quizlet.telegramBot.model.Users
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder.Companion.ALL_ITEMS
 import ru.proshik.english.quizlet.telegramBot.service.QuizletService
@@ -42,7 +42,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService,
 
     private val operationResultStore = ConcurrentHashMap<Long, OperationResult>()
 
-    private val userContext: (user: User) -> UserContext = { UserContext(it.login, it.accessToken) }
+    private val userContext: (user: Users) -> UserContext = { UserContext(it.login, it.accessToken) }
 
 
     // Notes:
@@ -62,7 +62,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService,
     // 3.5 тип клавиатуры
     // 3.6 признак наличия результата
     // 4. Сохранить информацию о шаге
-    override fun init(chatId: Long, user: User): BotApiMethod<out Serializable> {
+    override fun init(chatId: Long, user: Users): BotApiMethod<out Serializable> {
         stepStore.remove(chatId)
         operationResultStore.remove(chatId)
 
@@ -103,14 +103,14 @@ class StudiedOperationExecutor(val quizletService: QuizletService,
             // build text message with keyboard
             messageFormatter.buildStepPageKeyboardMessage(chatId, text, outputData)
         } else {
-            SendMessage().setChatId(chatId).setText("User classes doesn't find")
+            SendMessage().setChatId(chatId).setText("Users classes doesn't find")
         }
     }
 
     override fun execute(chatId: Long,
                          messageId: Int,
                          callData: String,
-                         user: User): BotApiMethod<out Serializable> {
+                         user: Users): BotApiMethod<out Serializable> {
 
         val (navigateTypeName, data) = callData.split(";")
 
@@ -180,7 +180,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService,
                                 callData: String,
                                 navigateType: NavigateType,
                                 activeStep: ActiveStep,
-                                user: User): BotApiMethod<out Serializable> {
+                                user: Users): BotApiMethod<out Serializable> {
         val (command, value) = callData.split(";")
 
         return when (navigateType) {
