@@ -19,5 +19,25 @@
       "name": "quizlet.response-type",
       "type": "java.lang.String",
       "description": "Description for quizlet.response-type."
+    },
+    {
+      "name": "quizlet.scope",
+      "type": "java.lang.String",
+      "description": "Description for quizlet.scope."
+    },
+    {
+      "name": "telegram.max-threads",
+      "type": "java.lang.String",
+      "description": "Description for telegram.max-threads."
+    },
+    {
+      "name": "telegram.token",
+      "type": "java.lang.String",
+      "description": "Description for telegram.token."
+    },
+    {
+      "name": "telegram.username",
+      "type": "java.lang.String",
+      "description": "Description for telegram.username."
     }
   ] }

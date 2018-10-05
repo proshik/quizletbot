@@ -6,12 +6,11 @@ import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.exception.AuthenticationException
-import ru.proshik.english.quizlet.telegramBot.model.User
+import ru.proshik.english.quizlet.telegramBot.model.Users
 import ru.proshik.english.quizlet.telegramBot.queue.NotificationQueue
 import ru.proshik.english.quizlet.telegramBot.queue.Queue
 import ru.proshik.english.quizlet.telegramBot.repository.StateRepository
 import ru.proshik.english.quizlet.telegramBot.repository.UsersRepository
-import java.time.ZonedDateTime
 
 @Service
 class AuthenticationService(private val quizletClient: QuizletClient,
@@ -48,7 +47,7 @@ class AuthenticationService(private val quizletClient: QuizletClient,
         var user = usersRepository.findByChatId(chatId)
         if (user == null) {
             // create account
-            user = User(ZonedDateTime.now(), chatId, authorization.userId, authorization.accessToken)
+            user = Users(chatId, authorization.userId, authorization.accessToken)
         } else {
             // update an user login and access token
             user.login = authorization.userId

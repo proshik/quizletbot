@@ -1,19 +1,19 @@
 package ru.proshik.english.quizlet.telegramBot.repository
 
-import org.springframework.data.jpa.repository.JpaRepository
-import org.springframework.data.jpa.repository.Modifying
-import org.springframework.data.jpa.repository.Query
+import org.springframework.data.jdbc.repository.query.Modifying
+import org.springframework.data.jdbc.repository.query.Query
+import org.springframework.data.repository.CrudRepository
 import org.springframework.data.repository.query.Param
 import org.springframework.stereotype.Repository
-import ru.proshik.english.quizlet.telegramBot.model.User
+import ru.proshik.english.quizlet.telegramBot.model.Users
 
 @Repository
-interface UsersRepository : JpaRepository<User, Long> {
+interface UsersRepository : CrudRepository<Users, Long> {
 
-    @Query(value = "select u from User u where u.chatId = :chatId")
-    fun findByChatId(@Param("chatId") chatId: Long): User?
+    @Query(value = "select u.id, u.chat_id, u.login, u.access_token from Users u where u.chat_id = :chatId")
+    fun findByChatId(@Param("chatId") chatId: Long): Users?
 
     @Modifying
-    @Query(value = "delete from User where id = :id")
+    @Query(value = "delete from Users where id = :id")
     fun deleteByUserId(@Param("id") id: Long)
 }

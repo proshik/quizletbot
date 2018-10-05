@@ -13,11 +13,11 @@ class NotificationOperationExecutor
 //        HOUR_OF_DAY
 //    }
 //
-//    override fun init(chatId: Long, user: User): BotApiMethod<out Serializable> {
+//    override fun init(chatId: Long, user: Users): BotApiMethod<out Serializable> {
 //        return SendMessage().setChatId(chatId).setText("OperationData doesn't implement")
 //    }
 //
-//    override fun execute(chatId: Long, messageId: Int, callData: String, user: User): BotApiMethod<out Serializable> {
+//    override fun execute(chatId: Long, messageId: Int, callData: String, user: Users): BotApiMethod<out Serializable> {
 //        return SendMessage().setChatId(chatId).setText("OperationData doesn't implement")
 //    }
 
