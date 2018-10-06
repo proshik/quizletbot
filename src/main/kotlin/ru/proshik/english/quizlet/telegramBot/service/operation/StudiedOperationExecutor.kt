@@ -200,10 +200,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
 
                 val prefix = "${OperationType.STUDIED.name};${RESULT.name}"
 
-                val prevStep = activeStep.userGroups.size > 1
-
-                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, studied.setsStats.size, prefix,
-                        prevStep = prevStep)
+                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, studied.setsStats.size, prefix)
             }
             PAGING_BY_BUTTONS -> {
                 val stepInfo = stepStore[chatId] ?: return buildCleanEditMessage(chatId, messageId)
@@ -212,8 +209,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                         .filter { group -> group.id == stepInfo.groupId }
                         .first()
 
-                val text = StringBuilder("Class: *${group.name}*\n")
-                text.append("Please, select a set from the class *${group.name}:*\n")
+                val text = "Class: *${group.name}*\n Please, select a set from the class *${group.name}:*\n"
 
                 val items = group.sets.asSequence()
                         .map { it -> Pair(it.title, it.id.toString()) }
@@ -223,7 +219,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
 
                 val prevStep = stepInfo.userGroups.size > 1
 
-                messageFormatter.buildStepPageKeyboardMessage(chatId, text.toString(), items, prefix, messageId,
+                messageFormatter.buildStepPageKeyboardMessage(chatId, text, items, prefix, messageId,
                         firstElemInGroup = value.toInt(), pagingButton = true, showAllLine = true, prevStep = prevStep)
             }
             else -> return buildCleanKeyboardMessage(chatId, messageId)
@@ -287,14 +283,15 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                 val text = if (modeStat.finishDate != null) {
                     val finishedDate = Instant.ofEpochMilli(modeStat.finishDate * 1000L).atZone(ZoneId.systemDefault())
                             .toLocalDate()
-                    "Finished *${mode.title}* on ${DATA_FORMAT.format(finishedDate)} (${modeStats.size}) ✅"
+                    "Finished *${mode.title}* on ${DATA_FORMAT.format(finishedDate)} " +
+//                            "(${modeStats.size}) " +
+                            "✅"
 
                 } else {
                     val startedDate = Instant.ofEpochMilli(modeStat.startDate * 1000L).atZone(ZoneId.systemDefault())
                             .toLocalDate()
                     "Started *${mode.title}* on ${DATA_FORMAT.format(startedDate)} ☑️"
                 }
-
 
                 message.append(text)
 
@@ -307,7 +304,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
             }
         }
 
-        message.append("\n[Open set](${set.url})")
+        message.append("\n_Go study:_ [${set.title.replace("[", "").replace("]", "")}](${set.url})")
 
         return message.toString()
     }

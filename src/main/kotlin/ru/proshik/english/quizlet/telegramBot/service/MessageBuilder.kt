@@ -41,7 +41,7 @@ class MessageBuilder {
     fun buildStepPageKeyboardMessage(chatId: Long,
                                      messageText: String,
                                      items: List<Pair<String, String>>,
-                                     prefix: String,
+                                     prefix: String = "",
                                      messageId: Int? = null,
                                      itemInRow: Int = 1,
                                      firstElemInGroup: Int = 1,
