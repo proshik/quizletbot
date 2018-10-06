@@ -22,7 +22,7 @@ class QuizletController(private val authenticationService: AuthenticationService
 
         authenticationService.authenticate(state, code)
 
-        // TODO change location to telegram url if state from telegram bot or to / if from web. Remove after deploy to environment
+        // TODO change location to telegram url if state from telegram bot or to / if from web. Remove after the first deploy to the environment and checked
         httpServletResponse.setHeader("Location", "/")
         httpServletResponse.status = 302
     }

@@ -14,6 +14,8 @@ import ru.proshik.english.quizlet.telegramBot.service.BotService.MainMenu.STUDIE
 import ru.proshik.english.quizlet.telegramBot.service.BotService.NotificationMenu.*
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperationExecutor
 import ru.proshik.english.quizlet.telegramBot.service.vo.CommandType
+import ru.proshik.english.quizlet.telegramBot.service.vo.NavigateType
+import ru.proshik.english.quizlet.telegramBot.service.vo.OperationType
 import java.io.Serializable
 
 @Component
@@ -27,8 +29,8 @@ class BotService(private val usersRepository: UsersRepository,
     }
 
     enum class MainMenu(val title: String) {
-        STUDIED("Studied"),
-        NOTIFICATIONS("Notifications");
+        STUDIED("\uD83D\uDCCA Your Study Sets"),
+        NOTIFICATIONS("\uD83D\uDCEC Notifications");
     }
 
     enum class NotificationMenu(val title: String) {
@@ -90,7 +92,7 @@ class BotService(private val usersRepository: UsersRepository,
 
                 LOG.info("user with chatId=$chatId was authorized/reauthorized")
 
-                buildMessage(chatId, "$AUTHORIZE_URL $authUrl")
+                buildMessage(chatId, "$AUTHORIZE_URL$authUrl")
             }
             CommandType.REVOKE_AUTH -> {
                 val user = usersRepository.findByChatId(chatId)
@@ -123,7 +125,9 @@ class BotService(private val usersRepository: UsersRepository,
                 val user = usersRepository.findByChatId(chatId)
                         ?: return buildMessage(chatId, "Please, authorize with quizlet.com, use the screen keyboard.", buildAuthorizeMenu())
 
-                return studiedOperation.init(chatId, user)
+
+
+                return studiedOperation.init(chatId)
             }
             NOTIFICATIONS.title -> buildMessage(chatId, "Select a notification type: ", buildNotificationMenu())
             REMINDING.title -> {
@@ -131,7 +135,10 @@ class BotService(private val usersRepository: UsersRepository,
                         ?: return buildMessage(chatId, "Please, authorize with quizlet.com, use the screen keyboard.", buildAuthorizeMenu())
 
 //                return notificationOperation.init(chatId, user)
-                return SendMessage().setChatId(chatId).setText("OperationData doesn't implement")
+                return SendMessage()
+                        .setChatId(chatId)
+                        .setText("*Sorry, operation doesn't implement*")
+                        .enableMarkdown(true)
             }
             MAIN_MENU.title -> {
                 usersRepository.findByChatId(chatId)
@@ -154,19 +161,15 @@ class BotService(private val usersRepository: UsersRepository,
         val user = usersRepository.findByChatId(chatId)
                 ?: return buildMessage(chatId, "Please, authorize with quizlet.com, use the screen keyboard.", buildAuthorizeMenu())
 
-//        val operation = objectMapper.readValue(user.operationData, OperationData::class.java)
-//                ?: return EditMessageReplyMarkup()
-//                        .setChatId(chatId)
-//                        .setMessageId(messageId)
-//                        .setReplyMarkup(null)
+        val (operation, step, navigate, value) = callData.split(";")
 
-        return studiedOperation.execute(chatId, messageId, callData, user)
+        val navigateType = NavigateType.valueOf(navigate)
 
-//        return when (operation.operationType) {
-//            STUDIED.title -> studiedOperation.execute(chatId, messageId, callData, user)
-//            NOTIFICATIONS.title -> studiedOperation.execute(chatId, messageId, callData, user)
+        return when (OperationType.valueOf(operation)) {
+            OperationType.STUDIED -> studiedOperation.execute(chatId, messageId, step, navigateType, value)
+            OperationType.NOTIFICATIONS -> studiedOperation.execute(chatId, messageId, step, navigateType, value)
 //            else -> EditMessageReplyMarkup().setChatId(chatId).setMessageId(messageId).setReplyMarkup(null)
-//        }
+        }
     }
 
     private fun buildMessage(chatId: Long,

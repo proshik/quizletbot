@@ -48,7 +48,6 @@ class Bot(@Value("\${telegram.token}") private val token: String,
             LOG.error("message doesn't send", e)
             sendMessage(buildErrorMessage(update))
         } catch (e: Error) {
-            //TODO check how bot will work after Error. Example: TODO() method
             LOG.error("Panic! Messages not sending! Internal error", e)
             sendMessage(buildErrorMessage(update))
         }
