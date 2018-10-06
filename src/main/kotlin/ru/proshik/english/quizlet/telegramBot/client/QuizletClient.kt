@@ -16,7 +16,6 @@ class QuizletClient(@Value("\${quizlet.auth.secret}") private val secret: String
         FuelManager.instance.apply {
             timeoutInMillisecond = 3000
             timeoutReadInMillisecond = 1000
-
         }
     }
 
