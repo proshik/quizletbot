@@ -153,7 +153,14 @@ class MessageBuilder {
         if (items.size in 5..8) {
             if (firstElemInGroup < 5) {
                 row.add(InlineKeyboardButton().setText("·1-4·").setCallbackData("$prefix;$PAGING_BY_BUTTONS;1"))
-                row.add(InlineKeyboardButton().setText("5-${items.size}").setCallbackData("$prefix;$PAGING_BY_BUTTONS;5"))
+                if (items.size == 5) {
+                    row.add(InlineKeyboardButton().setText("5").setCallbackData("$prefix;$PAGING_BY_BUTTONS;5"))
+                } else {
+                    row.add(InlineKeyboardButton().setText("5-${items.size}").setCallbackData("$prefix;$PAGING_BY_BUTTONS;5"))
+                }
+            } else if (items.size == 5) {
+                row.add(InlineKeyboardButton().setText("1-4").setCallbackData("$prefix;$PAGING_BY_BUTTONS;1"))
+                row.add(InlineKeyboardButton().setText("·5·").setCallbackData("$prefix;$PAGING_BY_BUTTONS;5"))
             } else {
                 row.add(InlineKeyboardButton().setText("1-4").setCallbackData("$prefix;$PAGING_BY_BUTTONS;1"))
                 row.add(InlineKeyboardButton().setText("·5-${items.size}·").setCallbackData("$prefix;$PAGING_BY_BUTTONS;5"))
