@@ -110,7 +110,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                           value: String): BotApiMethod<out Serializable> {
         val activeStep = stepStore[chatId] ?: return buildCleanEditMessage(chatId, messageId)
 
-        when (navigateType) {
+        return when (navigateType) {
             NEXT_STEP -> {
                 val group = activeStep.userGroups.asSequence()
                         .filter { it.id.toString() == value }
@@ -143,10 +143,22 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
 
                 val prevStep = activeStep.userGroups.size > 1
 
-                return messageFormatter.buildStepPageKeyboardMessage(chatId, text.toString(), items, prefix,
+                messageFormatter.buildStepPageKeyboardMessage(chatId, text.toString(), items, prefix,
                         messageId, prevStep = prevStep, showAllLine = true)
             }
-            PAGING_BY_BUTTONS -> TODO("not implemented") // need to implement when groups (classes) will be include more than 4 items
+            PAGING_BY_BUTTONS -> {
+                val stepInfo = stepStore[chatId] ?: return buildCleanEditMessage(chatId, messageId)
+
+                val items = stepInfo.userGroups.asSequence()
+                        .map { group -> Pair(group.name, group.id.toString()) }
+                        .toList()
+                val text = "*Please, select a class:*\n"
+
+                val prefix = "${OperationType.STUDIED.name};${GROUP.name}"
+
+                messageFormatter.buildStepPageKeyboardMessage(chatId, text, items, prefix, messageId,
+                        firstElemInGroup = value.toInt(), pagingButton = true)
+            }
             else -> return buildCleanKeyboardMessage(chatId, messageId)
         }
     }
