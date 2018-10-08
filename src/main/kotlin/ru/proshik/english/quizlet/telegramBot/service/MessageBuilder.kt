@@ -55,7 +55,8 @@ class MessageBuilder {
         if (itemInRow > 1 && items.size < itemInRow)
             throw IllegalArgumentException("unexpectable value itemInRow=$itemInRow when size of items is ${items.size}")
 
-        val keyboard = if (items.size > 1) buildInlineKeyboard(showAllLine, items, prefix, firstElemInGroup, itemInRow, prevStep) else null
+        val keyboard = if (items.size > 1) buildInlineKeyboard(showAllLine, items, prefix, firstElemInGroup,
+                itemInRow, prevStep) else null
 
         if (pagingButton) {
             return EditMessageReplyMarkup()
@@ -79,35 +80,6 @@ class MessageBuilder {
                     .setReplyMarkup(keyboard)
     }
 
-    /**
-     * Build message with inline keyboard with paging by items
-     *
-     *  Example:
-     *  __________________________________________
-     * | Message 1                                |
-     * |                                          | -> body message
-     * | bla-bla-bla                              |
-     * |__________________________________________|
-     * |____.1.____ 2 ____ 3 ____ 4 _____ 19>>____| -> it is a paging
-     *
-     */
-    fun buildItemPageKeyboardMessage(chatId: Long,
-                                     messageId: Int,
-                                     text: String,
-                                     countOfItems: Int,
-                                     prefix: String,
-                                     selectedItem: Int = 1,
-                                     prevStep: Boolean = false): BotApiMethod<out Serializable> {
-
-        val keyboard = if (countOfItems > 1) buildInlineKeyboard(countOfItems, selectedItem, prefix, prevStep) else null
-
-        return EditMessageText()
-                .setChatId(chatId)
-                .setMessageId(messageId)
-                .setText(text)
-                .setReplyMarkup(keyboard)
-                .enableMarkdown(true)
-    }
 
     private fun buildInlineKeyboard(showAllLine: Boolean,
                                     items: List<Pair<String, String>>,
@@ -195,7 +167,41 @@ class MessageBuilder {
         return keyboard
     }
 
-    private fun buildInlineKeyboard(countOfItems: Int, selectedItem: Int, prefix: String, prevStep: Boolean): InlineKeyboardMarkup {
+    /**
+     * Build message with inline keyboard with paging by items
+     *
+     *  Example:
+     *  __________________________________________
+     * | Message 1                                |
+     * |                                          | -> body message
+     * | bla-bla-bla                              |
+     * |__________________________________________|
+     * |____.1.____ 2 ____ 3 ____ 4 _____ 19>>____| -> it is a paging
+     *
+     */
+    fun buildItemPageKeyboardMessage(chatId: Long,
+                                     messageId: Int,
+                                     text: String,
+                                     itemIds: List<Long>,
+                                     prefix: String,
+                                     selectedItem: Int = 1,
+                                     prevStep: Boolean = false,
+                                     additionalItems: List<Pair<String, String>> = emptyList()): BotApiMethod<out Serializable> {
+
+        val keyboard = if (itemIds.size > 1) buildInlineKeyboard(itemIds, selectedItem, prefix, prevStep, additionalItems) else null
+
+        return EditMessageText()
+                .setChatId(chatId)
+                .setMessageId(messageId)
+                .setText(text)
+                .setReplyMarkup(keyboard)
+                .enableMarkdown(true)
+    }
+
+    private fun buildInlineKeyboard(itemIds: List<Long>,
+                                    selectedItem: Int,
+                                    prefix: String,
+                                    prevStep: Boolean, additionalItems: List<Pair<String, String>> = emptyList()): InlineKeyboardMarkup {
         val keyboard = InlineKeyboardMarkup()
 
         // initialize rows
@@ -204,52 +210,60 @@ class MessageBuilder {
         // build keyboards
         val row = ArrayList<InlineKeyboardButton>()
 
-        if (countOfItems > 5) {
-            if (selectedItem > 3 && selectedItem < (countOfItems - 2)) {
-                row.add(InlineKeyboardButton().setText("« 1").setCallbackData("$prefix;$PAGING_BY_ITEMS;1"))
-                row.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${selectedItem - 1}"))
-                row.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$prefix;$PAGING_BY_ITEMS;$selectedItem"))
-                row.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${selectedItem + 1}"))
-                row.add(InlineKeyboardButton().setText("$countOfItems »").setCallbackData("$prefix;$PAGING_BY_ITEMS;$countOfItems"))
+        if (itemIds.size > 5) {
+            if (selectedItem > 3 && selectedItem < (itemIds.size - 2)) {
+                row.add(InlineKeyboardButton().setText("« 1").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[0]}"))
+                row.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem - 1]}"))
+                row.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem]}"))
+                row.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem + 1]}"))
+                row.add(InlineKeyboardButton().setText("$itemIds.size »").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds.last()}"))
             } else {
                 if (selectedItem < 4) {
                     if (selectedItem == 1) {
-                        row.add(InlineKeyboardButton().setText("·1·").setCallbackData("$prefix;$PAGING_BY_ITEMS;1"))
+                        row.add(InlineKeyboardButton().setText("·1·").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[0]}"))
                     } else {
-                        row.add(InlineKeyboardButton().setText("1").setCallbackData("$prefix;$PAGING_BY_ITEMS;1"))
+                        row.add(InlineKeyboardButton().setText("1").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[0]}"))
                     }
                     for (item in 2..4) {
                         if (selectedItem == item) {
-                            row.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$prefix;$PAGING_BY_ITEMS;$item"))
+                            row.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[item - 1]}"))
                         } else {
-                            row.add(InlineKeyboardButton().setText("$item").setCallbackData("$prefix;$PAGING_BY_ITEMS;$item"))
+                            row.add(InlineKeyboardButton().setText("$item").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[item - 1]}"))
                         }
                     }
-                    row.add(InlineKeyboardButton().setText("$countOfItems »").setCallbackData("$prefix;$PAGING_BY_ITEMS;$countOfItems"))
+                    row.add(InlineKeyboardButton().setText("${itemIds.size} »").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds.last()}"))
                 } else {
-                    row.add(InlineKeyboardButton().setText("« 1").setCallbackData("$prefix;$PAGING_BY_ITEMS;1"))
-                    for (item in countOfItems - 3 until countOfItems) {
+                    row.add(InlineKeyboardButton().setText("« 1").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[0]}"))
+                    for (item in itemIds.size - 3 until itemIds.size) {
                         if (selectedItem == item) {
-                            row.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$prefix;$PAGING_BY_ITEMS;$item"))
+                            row.add(InlineKeyboardButton().setText("·$item·").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[item - 1]}"))
                         } else {
-                            row.add(InlineKeyboardButton().setText("$item").setCallbackData("$prefix;$PAGING_BY_ITEMS;$item"))
+                            row.add(InlineKeyboardButton().setText("$item").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[item - 1]}"))
                         }
                     }
-                    if (selectedItem == countOfItems) {
-                        row.add(InlineKeyboardButton().setText("·$countOfItems·").setCallbackData("$prefix;$PAGING_BY_ITEMS;$countOfItems"))
+                    if (selectedItem == itemIds.size) {
+                        row.add(InlineKeyboardButton().setText("·${itemIds.size}·").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds.last()}"))
                     } else {
-                        row.add(InlineKeyboardButton().setText("$countOfItems").setCallbackData("$prefix;$PAGING_BY_ITEMS;$countOfItems"))
+                        row.add(InlineKeyboardButton().setText("${itemIds.size}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds.last()}"))
                     }
                 }
             }
         } else {
-            for (item in 1..countOfItems) {
+            for (item in 1..itemIds.size) {
                 val title = if (selectedItem == item) "·$item·" else "$item"
-                row.add(InlineKeyboardButton().setText(title).setCallbackData("$prefix;$PAGING_BY_ITEMS;$item"))
+                row.add(InlineKeyboardButton().setText(title).setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[item - 1]}"))
             }
         }
 
         rows.add(row)
+
+        if (additionalItems.isNotEmpty()) {
+            val additionalRow = ArrayList<InlineKeyboardButton>()
+            for (item in additionalItems) {
+                additionalRow.add(InlineKeyboardButton().setText(item.first).setCallbackData("$prefix;$UPDATE_ITEMS;${item.second}"))
+            }
+            rows.add(additionalRow)
+        }
 
         rows.add(buildBackRow(prevStep, prefix))
 
