@@ -28,3 +28,5 @@
 .mvn
 
 *.DS_Store
+
+*.env
