@@ -27,4 +27,4 @@
 ### Maven ###
 .mvn
 
-.env
+*.DS_Store
