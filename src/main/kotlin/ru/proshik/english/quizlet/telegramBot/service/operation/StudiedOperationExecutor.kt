@@ -24,9 +24,13 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
 
     companion object {
 
-        val DATA_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy")
+        val RESULT_MESSAGE_DATA_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy")
 
-        val RESULT_ADDIT_BUTTONS = listOf(Pair("All", ALL_ITEMS), Pair("> 5", "5"), Pair("> 3", "3"), Pair("> 2", "2"))
+        val RESULT_ADDITIONAL_BUTTONS = listOf(
+                Pair("All", ALL_ITEMS),
+                Pair("0-2 ✅", "0"),
+                Pair("3-5 ✅", "3"),
+                Pair("6-7 ✅", "6"))
     }
 
     val messageFormatter = MessageBuilder()
@@ -41,7 +45,8 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                         val userGroups: List<UserGroupsResp>,
                         val groupId: Long?,
                         val studied: Studied? = null,
-                        val studiedSet: List<StudiedSet>? = null)
+                        val studiedSet: List<StudiedSet>? = null,
+                        val sortValue: String? = null)
 
     private val stepStore = ConcurrentHashMap<Long, StepInfo>()
 
@@ -209,7 +214,7 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
 
                 val studied = quizletService.studiedInfo(chatId, group.id, setIds, stepInfo.userGroups)
 
-                stepStore[chatId] = StepInfo(RESULT, stepInfo.userGroups, group.id, studied, studied.setsStats)
+                stepStore[chatId] = StepInfo(RESULT, stepInfo.userGroups, group.id, studied, studied.setsStats, sortValue = value)
 
                 // build text message for first element
                 val text = createMessageText(studied.studiedClass, studied.setsStats[0])
@@ -218,8 +223,13 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
 
                 val items = studied.setsStats.map { it.id }
 
-                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, items, prefix,
-                        additionalItems = RESULT_ADDIT_BUTTONS)
+                val sortButtons = if (items.size > 1) {
+                    buildSortButtonItems(value)
+                } else {
+                    emptyList()
+                }
+
+                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, items, prefix, extraButtons = sortButtons)
             }
             PAGING_BY_BUTTONS -> {
                 val group = stepInfo.userGroups.asSequence()
@@ -243,6 +253,12 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
         }
     }
 
+    private fun buildSortButtonItems(value: String): List<Pair<String, String>> {
+        return RESULT_ADDITIONAL_BUTTONS.asSequence()
+                .map { if (it.second == value) Pair("·${it.first}·", it.second) else it }
+                .toList()
+    }
+
     private fun handleSelectResult(chatId: Long,
                                    messageId: Int,
                                    navigateType: NavigateType,
@@ -264,11 +280,13 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
 
                 val items = studiedSets.map { it.id }
 
+                val sortButtons = buildSortButtonItems(stepInfo.sortValue!!)
+
                 messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, items, prefix,
-                        studiedSets.indexOf(set) + 1, additionalItems = RESULT_ADDIT_BUTTONS)
+                        studiedSets.indexOf(set) + 1, extraButtons = sortButtons)
             }
             UPDATE_ITEMS -> {
-                val newSets = if (value == ALL_ITEMS) {
+                val sortedSets = if (value == ALL_ITEMS) {
                     studied.setsStats.asSequence().map { it }.toList()
                 } else {
                     val count = value.toInt()
@@ -278,21 +296,27 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                                 it.second.asSequence()
                                         .distinctBy { it.type }
                                         .filter { it.finishDate != null }
-                                        .count() > count
+                                        .count() in count..(count + 2)
                             }
                             .toMap().keys.toList()
                 }
 
-                val text = createMessageText(studied.studiedClass, newSets[0])
+                val text = if (sortedSets.isNotEmpty()) {
+                    createMessageText(studied.studiedClass, sortedSets.first())
+                } else {
+                    "Sets don't find by that criteria"
+                }
 
                 val prefix = "${OperationType.STUDIED.name};${RESULT.name}"
 
-                val items = newSets.map { it.id }
+                val items = sortedSets.map { it.id }
 
-                stepStore[chatId] = StepInfo(stepInfo.stepType, stepInfo.userGroups, stepInfo.groupId, studied, newSets)
+                stepStore[chatId] = StepInfo(stepInfo.stepType, stepInfo.userGroups, stepInfo.groupId, studied, sortedSets, value)
+
+                val sortButtons = buildSortButtonItems(value)
 
                 messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, items, prefix,
-                        additionalItems = RESULT_ADDIT_BUTTONS)
+                        extraButtons = sortButtons)
             }
             else -> return buildCleanKeyboardMessage(chatId, messageId)
         }
@@ -330,14 +354,14 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                 val text = if (modeStat.finishDate != null) {
                     val finishedDate = Instant.ofEpochMilli(modeStat.finishDate * 1000L).atZone(ZoneId.systemDefault())
                             .toLocalDate()
-                    "Finished *${mode.title}* on ${DATA_FORMAT.format(finishedDate)} " +
+                    "Finished *${mode.title}* on ${RESULT_MESSAGE_DATA_FORMAT.format(finishedDate)} " +
 //                            "(${modeStats.size}) " +
                             "✅"
 
                 } else {
                     val startedDate = Instant.ofEpochMilli(modeStat.startDate * 1000L).atZone(ZoneId.systemDefault())
                             .toLocalDate()
-                    "Started *${mode.title}* on ${DATA_FORMAT.format(startedDate)} ☑️"
+                    "Started *${mode.title}* on ${RESULT_MESSAGE_DATA_FORMAT.format(startedDate)} ☑️"
                 }
 
                 message.append(text)

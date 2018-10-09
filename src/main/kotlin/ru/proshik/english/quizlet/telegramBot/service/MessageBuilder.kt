@@ -55,7 +55,7 @@ class MessageBuilder {
         if (itemInRow > 1 && items.size < itemInRow)
             throw IllegalArgumentException("unexpectable value itemInRow=$itemInRow when size of items is ${items.size}")
 
-        val keyboard = if (items.size > 1) buildInlineKeyboard(showAllLine, items, prefix, firstElemInGroup,
+        val keyboard = if (items.size > 1) buildInlineItemPageRow(showAllLine, items, prefix, firstElemInGroup,
                 itemInRow, prevStep) else null
 
         if (pagingButton) {
@@ -81,12 +81,12 @@ class MessageBuilder {
     }
 
 
-    private fun buildInlineKeyboard(showAllLine: Boolean,
-                                    items: List<Pair<String, String>>,
-                                    prefix: String,
-                                    firstElemInGroup: Int,
-                                    itemInRow: Int,
-                                    prevStep: Boolean): InlineKeyboardMarkup {
+    private fun buildInlineItemPageRow(showAllLine: Boolean,
+                                       items: List<Pair<String, String>>,
+                                       prefix: String,
+                                       firstElemInGroup: Int,
+                                       itemInRow: Int,
+                                       prevStep: Boolean): InlineKeyboardMarkup {
         val keyboard = InlineKeyboardMarkup()
 
         // initialize rows
@@ -161,7 +161,9 @@ class MessageBuilder {
         }
         rows.add(row)
 
-        rows.add(buildBackRow(prevStep, prefix))
+        if (prevStep) {
+            rows.add(buildBackRow(prefix))
+        }
 
         keyboard.keyboard = rows
         return keyboard
@@ -178,6 +180,15 @@ class MessageBuilder {
      * |__________________________________________|
      * |____.1.____ 2 ____ 3 ____ 4 _____ 19>>____| -> it is a paging
      *
+     * With additional buttons:
+     *
+     *  __________________________________________
+     * | Message 1                                |
+     * |                                          | -> body message
+     * | bla-bla-bla                              |
+     * |__________________________________________|
+     * |____.1.____ 2 ____ 3 ____ 4 _____ 19>>____| -> it is a paging
+     * |___Button1___|___Button2___|___Button3____| -> it is extraButtons
      */
     fun buildItemPageKeyboardMessage(chatId: Long,
                                      messageId: Int,
@@ -186,9 +197,29 @@ class MessageBuilder {
                                      prefix: String,
                                      selectedItem: Int = 1,
                                      prevStep: Boolean = false,
-                                     additionalItems: List<Pair<String, String>> = emptyList()): BotApiMethod<out Serializable> {
+                                     extraButtons: List<Pair<String, String>> = emptyList()): BotApiMethod<out Serializable> {
 
-        val keyboard = if (itemIds.size > 1) buildInlineKeyboard(itemIds, selectedItem, prefix, prevStep, additionalItems) else null
+        val keyboard = InlineKeyboardMarkup()
+        // initialize rows
+        val rows = ArrayList<List<InlineKeyboardButton>>()
+
+        if (itemIds.size > 1) {
+            val navigateRow = buildInlineItemPageRow(itemIds, selectedItem, prefix)
+            rows.add(navigateRow)
+        }
+        if (extraButtons.isNotEmpty()) {
+            val additionalRow = ArrayList<InlineKeyboardButton>()
+            for (item in extraButtons) {
+                additionalRow.add(InlineKeyboardButton().setText(item.first).setCallbackData("$prefix;$UPDATE_ITEMS;${item.second}"))
+            }
+            rows.add(additionalRow)
+        }
+
+        if (prevStep) {
+            rows.add(buildBackRow(prefix))
+        }
+
+        keyboard.keyboard = rows
 
         return EditMessageText()
                 .setChatId(chatId)
@@ -198,14 +229,9 @@ class MessageBuilder {
                 .enableMarkdown(true)
     }
 
-    private fun buildInlineKeyboard(itemIds: List<Long>,
-                                    selectedItem: Int,
-                                    prefix: String,
-                                    prevStep: Boolean, additionalItems: List<Pair<String, String>> = emptyList()): InlineKeyboardMarkup {
-        val keyboard = InlineKeyboardMarkup()
-
-        // initialize rows
-        val rows = ArrayList<List<InlineKeyboardButton>>()
+    private fun buildInlineItemPageRow(itemIds: List<Long>,
+                                       selectedItem: Int,
+                                       prefix: String): List<InlineKeyboardButton> {
 
         // build keyboards
         val row = ArrayList<InlineKeyboardButton>()
@@ -216,7 +242,7 @@ class MessageBuilder {
                 row.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem - 1]}"))
                 row.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem]}"))
                 row.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem + 1]}"))
-                row.add(InlineKeyboardButton().setText("$itemIds.size »").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds.last()}"))
+                row.add(InlineKeyboardButton().setText("${itemIds.size} »").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds.last()}"))
             } else {
                 if (selectedItem < 4) {
                     if (selectedItem == 1) {
@@ -255,28 +281,14 @@ class MessageBuilder {
             }
         }
 
-        rows.add(row)
-
-        if (additionalItems.isNotEmpty()) {
-            val additionalRow = ArrayList<InlineKeyboardButton>()
-            for (item in additionalItems) {
-                additionalRow.add(InlineKeyboardButton().setText(item.first).setCallbackData("$prefix;$UPDATE_ITEMS;${item.second}"))
-            }
-            rows.add(additionalRow)
-        }
-
-        rows.add(buildBackRow(prevStep, prefix))
-
-        keyboard.keyboard = rows
-        return keyboard
+        return row
     }
 
-    private fun buildBackRow(prevStep: Boolean, prefix: String): ArrayList<InlineKeyboardButton> {
+    private fun buildBackRow(prefix: String): ArrayList<InlineKeyboardButton> {
         val backRow = ArrayList<InlineKeyboardButton>()
 
-        if (prevStep) {
-            backRow.add(InlineKeyboardButton().setText("$BACK Back").setCallbackData("$prefix;$PREV_STEP;-1"))
-        }
+        backRow.add(InlineKeyboardButton().setText("$BACK Back").setCallbackData("$prefix;$PREV_STEP;-1"))
+
         return backRow
     }
 

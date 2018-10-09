@@ -22,7 +22,7 @@ spring:
     serialization.write-dates-as-timestamps: false
   liquibase:
     change-log: classpath:db-changelog.xml
-    enabled: ${LIQUIBASE_ENABLE:true}
+    enabled: ${LIQUIBASE_ENABLE:false}
 server:
   port: ${PORT:8080}
 
@@ -43,7 +43,3 @@ telegram:
   username: ${TELEGRAM_USERNAME}
   token: ${TELEGRAM_TOKEN}
   max-threads: ${TELEGRAM_MAX_THREAD:1}
-
-logging:
-  level:
-    org.springframework.jdbc.core: trace
