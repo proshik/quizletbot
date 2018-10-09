@@ -13,8 +13,6 @@ create table if not exists users
   chat_id      bigint UNIQUE  NOT NULL,
   login        text UNIQUE    NOT NULL,
   access_token text
-  --   enabled_modes        text           NOT NULL,
-  --   operation_data jsonb,
 );
 
 
