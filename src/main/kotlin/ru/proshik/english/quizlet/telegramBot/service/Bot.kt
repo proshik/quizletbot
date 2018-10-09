@@ -81,14 +81,6 @@ class Bot(@Value("\${telegram.token}") private val token: String,
         }
     }
 
-    fun <T : Serializable> sendMessage(message: BotApiMethod<T>, callback: SentCallback<T>) {
-        try {
-            executeAsync(message, callback)
-        } catch (e: TelegramApiException) {
-            LOG.error("async send message")
-        }
-    }
-
     private fun registerNotificationScheduler() {
         Thread {
             while (true) {
