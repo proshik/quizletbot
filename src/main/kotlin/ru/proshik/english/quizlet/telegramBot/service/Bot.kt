@@ -5,14 +5,15 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.bots.DefaultBotOptions
 import org.telegram.telegrambots.bots.TelegramLongPollingBot
+import org.telegram.telegrambots.meta.api.methods.ActionType
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.ParseMode
+import org.telegram.telegrambots.meta.api.methods.send.SendChatAction
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
 import org.telegram.telegrambots.meta.api.objects.Update
 import org.telegram.telegrambots.meta.bots.AbsSender
 import org.telegram.telegrambots.meta.exceptions.TelegramApiException
 import org.telegram.telegrambots.meta.exceptions.TelegramApiRequestException
-import org.telegram.telegrambots.meta.updateshandlers.SentCallback
 import ru.proshik.english.quizlet.telegramBot.queue.NotificationQueue
 import java.io.Serializable
 import javax.annotation.PostConstruct
@@ -106,7 +107,7 @@ class Bot(@Value("\${telegram.token}") private val token: String,
     }
 
     private fun message(update: Update): BotApiMethod<out Serializable> {
-//        sendMessage(SendChatAction().setChatId(update.message.chatId).setAction(ActionType.TYPING))
+        sendMessage(SendChatAction().setChatId(update.message.chatId).setAction(ActionType.TYPING))
 
         val chatId = update.message.chatId
         val text = update.message.text
@@ -129,7 +130,7 @@ class Bot(@Value("\${telegram.token}") private val token: String,
         val messageId = update.callbackQuery.message.messageId
         val callData = update.callbackQuery.data
 
-//        sendMessage(SendChatAction().setChatId(chatId).setAction(ActionType.TYPING))
+        sendMessage(SendChatAction().setChatId(chatId).setAction(ActionType.TYPING))
 
         return botService.handleCallback(chatId, messageId, callData)
     }

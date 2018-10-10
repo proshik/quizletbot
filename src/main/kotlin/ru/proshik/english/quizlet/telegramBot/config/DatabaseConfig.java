@@ -33,14 +33,4 @@ public class DatabaseConfig extends JdbcConfiguration {
         return new DataSourceTransactionManager(dataSource);
     }
 
-//    @Bean
-//    DataSource dataSource() {
-////        (5)
-//        return new EmbeddedDatabaseBuilder()
-//                .generateUniqueName(true)
-//                .
-//                .setType(EmbeddedDatabaseType.HSQL)
-//                .addScript("create-customer-schema.sql")
-//                .build();
-//    }
 }
