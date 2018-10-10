@@ -30,7 +30,6 @@ class BotController(private val studyOperation: StudyOperationExecutor,
         STUDIED("\uD83D\uDCCA Your Study Sets"),
         NOTIFICATIONS("\uD83D\uDCEC Notifications"),
         ACCOUNT("👤 Account");
-
     }
 
     enum class NotificationMenu(val title: String) {

@@ -2,10 +2,10 @@ package ru.proshik.english.quizlet.telegramBot.service.vo
 
 enum class CommandType(val title: String) {
 
-    START("/start"),
-    HELP("/help"),
-    AUTHORIZE("/authorize"),
-    REVOKE_AUTH("/revoke");
+    START("start"),
+    HELP("help"),
+    AUTHORIZE("authorize"),
+    REVOKE_AUTH("revoke");
 //    STUDY("/stydy"),
 //    NOTIFICATION("/notification");
 
