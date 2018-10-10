@@ -22,10 +22,13 @@ interface UsersRepository : CrudRepository<Users, Long> {
     @Query(value = "delete from Users where id = :id")
     fun deleteByUserId(@Param("id") id: Long)
 
-    @Query(value = "select u.access_token is  from Users u where u.chat_id = :chatId")
-    fun checkUserAuthentication(@Param("chatId") chatId: Long)
+    @Query(value = "select u.access_token is not null from Users u where u.chat_id = :chatId")
+    fun isAuthorized(@Param("chatId") chatId: Long): Boolean
+
+    @Query(value = "select u.access_token is null from Users u where u.chat_id = :chatId")
+    fun notAuthorized(@Param("chatId") chatId: Long): Boolean
 
     @Modifying
-    @Query(value = "update users set access_token = null where u.chat_id = :chatId")
-    fun removeUserAccessToken(@Param("chatId") chatId: Long)
+    @Query(value = "update users set access_token = null where chat_id = :chatId")
+    fun revokeAccessToken(@Param("chatId") chatId: Long)
 }

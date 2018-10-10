@@ -1,5 +1,6 @@
 package ru.proshik.english.quizlet.telegramBot.service.operation
 
+import org.apache.log4j.Logger
 import org.springframework.stereotype.Component
 import org.telegram.telegrambots.meta.api.methods.BotApiMethod
 import org.telegram.telegrambots.meta.api.methods.send.SendMessage
@@ -9,7 +10,7 @@ import ru.proshik.english.quizlet.telegramBot.dto.UserGroupsResp
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder
 import ru.proshik.english.quizlet.telegramBot.service.MessageBuilder.Companion.ALL_ITEMS
 import ru.proshik.english.quizlet.telegramBot.service.QuizletService
-import ru.proshik.english.quizlet.telegramBot.service.operation.StudiedOperationExecutor.StepType.*
+import ru.proshik.english.quizlet.telegramBot.service.operation.StudyOperationExecutor.StepType.*
 import ru.proshik.english.quizlet.telegramBot.service.vo.*
 import ru.proshik.english.quizlet.telegramBot.service.vo.NavigateType.*
 import java.io.Serializable
@@ -20,9 +21,11 @@ import java.util.concurrent.ConcurrentHashMap
 
 
 @Component
-class StudiedOperationExecutor(val quizletService: QuizletService) : OperationExecutor {
+class StudyOperationExecutor(val quizletService: QuizletService) : OperationExecutor {
 
     companion object {
+
+        private val LOG = Logger.getLogger(StudyOperationExecutor::class.java)
 
         val RESULT_MESSAGE_DATA_FORMAT = DateTimeFormatter.ofPattern("d MMM yyyy")
 
@@ -69,6 +72,8 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
     // 3.6 признак наличия результата
     // 4. Сохранить информацию о шаге
     override fun init(chatId: Long): BotApiMethod<out Serializable> {
+        LOG.info("init study operation for user with chatId=$chatId")
+
         stepStore.remove(chatId)
 
         val data = quizletService.userGroups(chatId)
@@ -229,7 +234,11 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                     emptyList()
                 }
 
-                messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, items, prefix, extraButtons = sortButtons)
+                val message = messageFormatter.buildItemPageKeyboardMessage(chatId, messageId, text, items, prefix, extraButtons = sortButtons)
+
+                LOG.info("show result of study operation for user with chatId=$chatId")
+
+                message
             }
             PAGING_BY_BUTTONS -> {
                 val group = stepInfo.userGroups.asSequence()
@@ -354,28 +363,22 @@ class StudiedOperationExecutor(val quizletService: QuizletService) : OperationEx
                 val text = if (modeStat.finishDate != null) {
                     val finishedDate = Instant.ofEpochMilli(modeStat.finishDate * 1000L).atZone(ZoneId.systemDefault())
                             .toLocalDate()
-                    "Finished *${mode.title}* on ${RESULT_MESSAGE_DATA_FORMAT.format(finishedDate)} " +
-//                            "(${modeStats.size}) " +
-                            "✅"
+                    "Finished *${mode.title}* on ${RESULT_MESSAGE_DATA_FORMAT.format(finishedDate)} ✅"
 
                 } else {
-                    val startedDate = Instant.ofEpochMilli(modeStat.startDate * 1000L).atZone(ZoneId.systemDefault())
+                    val startedDate = Instant.ofEpochMilli(modeStat.startDate * 1000L)
+                            .atZone(ZoneId.systemDefault())
                             .toLocalDate()
                     "Started *${mode.title}* on ${RESULT_MESSAGE_DATA_FORMAT.format(startedDate)} ☑️"
                 }
 
-                message.append(text)
-
-                // add formatted score
-//                if (modeStat.formattedScore != null) message.append(" ${modeStat.formattedScore}")
-
-                message.append("\n")
+                message.append("$text\n")
             } else {
                 message.append("*${mode.title}* has no activity ❌\n")
             }
         }
 
-        message.append("\n_Go study:_ [${set.title.replace("[", "").replace("]", "")}](${set.url})")
+        message.append("\n_Go to learn:_ [${set.title.replace("[", "").replace("]", "")}](${set.url})")
 
         return message.toString()
     }

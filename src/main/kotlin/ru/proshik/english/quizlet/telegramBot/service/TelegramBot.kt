@@ -19,15 +19,15 @@ import java.io.Serializable
 import javax.annotation.PostConstruct
 
 @Component
-class Bot(@Value("\${telegram.token}") private val token: String,
-          @Value("\${telegram.username}") private val username: String,
-          private val botService: BotService,
-          private val notificationQueue: NotificationQueue,
-          defaultBotOptions: DefaultBotOptions) : TelegramLongPollingBot(defaultBotOptions) {
+class TelegramBot(@Value("\${telegram.token}") private val token: String,
+                  @Value("\${telegram.username}") private val username: String,
+                  private val botController: BotController,
+                  private val notificationQueue: NotificationQueue,
+                  defaultBotOptions: DefaultBotOptions) : TelegramLongPollingBot(defaultBotOptions) {
 
     companion object {
 
-        private val LOG = Logger.getLogger(Bot::class.java)
+        private val LOG = Logger.getLogger(TelegramBot::class.java)
     }
 
     @Suppress("EXTENSION_SHADOWED_BY_MEMBER")
@@ -95,7 +95,7 @@ class Bot(@Value("\${telegram.token}") private val token: String,
                 val message = SendMessage()
                         .setChatId(notifyMessage.chatId)
                         .setText(notifyMessage.text)
-                        .setReplyMarkup(BotService.buildMainMenu())
+                        .setReplyMarkup(BotController.buildMainMenu())
 
                 try {
                     execute(message)
@@ -113,12 +113,12 @@ class Bot(@Value("\${telegram.token}") private val token: String,
         val text = update.message.text
 
         return when {
-            update.message.isCommand -> botService.handleCommand(chatId, text)
+            update.message.isCommand -> botController.handleCommand(chatId, text)
             //TODO investigate this behaviour
             update.message.isReply -> SendMessage()
                     .setChatId(chatId)
                     .setText("OperationData doesn't support, isReply message")
-            update.message.isUserMessage -> botService.handleOperation(chatId, update.message.messageId, text)
+            update.message.isUserMessage -> botController.handleOperation(chatId, update.message.messageId, text)
             else -> SendMessage()
                     .setChatId(chatId)
                     .setText("unexpected type of message")
@@ -130,16 +130,16 @@ class Bot(@Value("\${telegram.token}") private val token: String,
         val messageId = update.callbackQuery.message.messageId
         val callData = update.callbackQuery.data
 
-        sendMessage(SendChatAction().setChatId(chatId).setAction(ActionType.TYPING))
+//        sendMessage(SendChatAction().setChatId(chatId).setAction(ActionType.TYPING))
 
-        return botService.handleCallback(chatId, messageId, callData)
+        return botController.handleCallback(chatId, messageId, callData)
     }
 
 
     private fun buildErrorMessage(update: Update): SendMessage {
         return SendMessage()
                 .setChatId(defineChatId(update))
-                .setText("*Oops, there's been a mistake. Please, connect with a developer and try to repeat a request*")
+                .setText("*Please, try to repeat the request!*")
                 .setParseMode(ParseMode.MARKDOWN)
     }
 

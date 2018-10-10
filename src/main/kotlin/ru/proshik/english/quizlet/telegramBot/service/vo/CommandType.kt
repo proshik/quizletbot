@@ -4,9 +4,8 @@ enum class CommandType(val title: String) {
 
     START("/start"),
     HELP("/help"),
-    AUTHORIZE("/auth"),
-    RE_AUTHORIZE("/re_auth"),
-    REVOKE_AUTH("/revoke_auth");
+    AUTHORIZE("/authorize"),
+    REVOKE_AUTH("/revoke");
 //    STUDY("/stydy"),
 //    NOTIFICATION("/notification");
 

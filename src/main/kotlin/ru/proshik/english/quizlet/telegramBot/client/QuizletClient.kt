@@ -12,6 +12,7 @@ import ru.proshik.english.quizlet.telegramBot.dto.UserStudiedResp
 @Component
 class QuizletClient(@Value("\${quizlet.auth.secret}") private val secret: String,
                     @Value("\${quizlet.redirect-url}") private val redirectUrl: String) {
+
     init {
         FuelManager.instance.apply {
             timeoutInMillisecond = 3000
