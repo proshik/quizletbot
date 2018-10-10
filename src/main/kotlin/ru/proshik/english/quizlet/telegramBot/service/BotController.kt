@@ -12,6 +12,7 @@ import ru.proshik.english.quizlet.telegramBot.service.BotController.MainMenu.*
 import ru.proshik.english.quizlet.telegramBot.service.BotController.NotificationMenu.*
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudyOperationExecutor
 import ru.proshik.english.quizlet.telegramBot.service.vo.CommandType
+import ru.proshik.english.quizlet.telegramBot.service.vo.CommandType.*
 import ru.proshik.english.quizlet.telegramBot.service.vo.NavigateType
 import ru.proshik.english.quizlet.telegramBot.service.vo.OperationType
 import java.io.Serializable
@@ -67,6 +68,7 @@ class BotController(private val studyOperation: StudyOperationExecutor,
         private fun buildMenu(titles: List<String>): ReplyKeyboardMarkup {
             val keyboardMarkup = ReplyKeyboardMarkup().apply {
                 resizeKeyboard = true
+                oneTimeKeyboard = true
             }
 
             val rows = ArrayList<KeyboardRow>()
@@ -87,10 +89,9 @@ class BotController(private val studyOperation: StudyOperationExecutor,
         val commandType = CommandType.getByName(text) ?: return buildMessage(chatId, COMMAND_NOT_FOUND)
 
         return when (commandType) {
-            CommandType.START, CommandType.HELP -> {
-                val user = userService.getUserByChatId(chatId)
+            START, HELP -> {
+                val keyboard = if (userService.isAuthorized(chatId)) buildMainMenu() else buildAuthorizeMenu()
 
-                val keyboard = if (user != null) buildMainMenu() else buildAuthorizeMenu()
                 buildMessage(chatId, DEFAULT_MESSAGE, keyboard)
             }
             CommandType.AUTHORIZE -> {
@@ -98,9 +99,9 @@ class BotController(private val studyOperation: StudyOperationExecutor,
 
                 LOG.info("user with chatId=$chatId was authorized/reauthorized")
 
-                buildMessage(chatId, "$SEIZE_TO_AUTHORIZE$authUrl")
+                buildMessage(chatId, "$SEIZE_TO_AUTHORIZE\n$authUrl")
             }
-            CommandType.REVOKE_AUTH -> {
+            REVOKE_AUTH -> {
                 if (userService.isAuthorized(chatId)) {
                     userService.revokeAccessToken(chatId)
 
@@ -110,6 +111,12 @@ class BotController(private val studyOperation: StudyOperationExecutor,
                 } else {
                     buildMessage(chatId, NOT_AUTHORIZED_YET_MESSAGE, buildAuthorizeMenu())
                 }
+            }
+            STUDY -> {
+                if (!userService.isAuthorized(chatId))
+                    return buildMessage(chatId, INVITATION_TO_AUTHORIZE, buildAuthorizeMenu())
+
+                return studyOperation.init(chatId)
             }
         }
     }
