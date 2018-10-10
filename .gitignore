@@ -24,9 +24,6 @@
 /nbdist/
 /.nb-gradle/
 
-### Maven ###
-.mvn
-
 *.DS_Store
 
 *.env

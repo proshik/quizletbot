@@ -101,7 +101,7 @@ class StudyOperationExecutor(val quizletService: QuizletService) : OperationExec
                 // save step information
                 stepStore[chatId] = StepInfo(SET, data, data.first().id)
                 // build text message with keyboard
-                messageFormatter.buildStepPageKeyboardMessage(chatId, text, items, prefix)
+                messageFormatter.buildStepPageKeyboardMessage(chatId, text, items, prefix, showAllLine = true)
             }
             else -> SendMessage().setChatId(chatId).setText("Users classes doesn't find")
         }
