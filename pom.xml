@@ -26,13 +26,13 @@
         <liquibase.url>jdbc:postgresql://localhost:5432/quizletbot?user=postgres&amp;password=password</liquibase.url>
     </properties>
 
-    <repositories>
-        <repository>
-            <id>central</id>
-            <name>bintray</name>
-            <url>http://jcenter.bintray.com</url>
-        </repository>
-    </repositories>
+    <!--<repositories>-->
+        <!--<repository>-->
+            <!--<id>central</id>-->
+            <!--<name>bintray</name>-->
+            <!--<url>http://jcenter.bintray.com</url>-->
+        <!--</repository>-->
+    <!--</repositories>-->
 
     <dependencies>
         <!-- Spring Boot -->
