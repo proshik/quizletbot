@@ -9,7 +9,7 @@
 
 ## Usage
 
-Print the /start command after running bot service.
+Print the [/start]() command after running bot service.
 
 ## TODO
 
