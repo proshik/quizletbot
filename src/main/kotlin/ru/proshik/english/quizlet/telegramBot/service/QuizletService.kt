@@ -1,5 +1,6 @@
 package ru.proshik.english.quizlet.telegramBot.service
 
+import org.apache.log4j.Logger
 import org.springframework.stereotype.Service
 import ru.proshik.english.quizlet.telegramBot.client.QuizletClient
 import ru.proshik.english.quizlet.telegramBot.dto.SetResp
@@ -12,6 +13,10 @@ import ru.proshik.english.quizlet.telegramBot.service.vo.*
 @Service
 class QuizletService(private val quizletClient: QuizletClient,
                      private val usersRepository: UsersRepository) {
+
+    companion object {
+        private val LOG = Logger.getLogger(QuizletService::class.java)
+    }
 
     fun userGroups(chatId: Long): List<UserGroupsResp> {
         val userCredentials = usersRepository.getUserCredentials(chatId)
@@ -44,13 +49,26 @@ class QuizletService(private val quizletClient: QuizletClient,
         return sets.map { set ->
             val studiedModes = studiedSetsBySetId[set.id]
                     .orEmpty()
-                    .map { StudiedMode(defineModeType(it.mode), it.startDate, it.finishDate, it.formattedScore) }
+                    .asSequence()
+                    .map {
+                        val modeType = defineModeType(it.mode)
+                        if (modeType != null)
+                            Pair(it, modeType)
+                        else {
+                            LOG.warn("unrecognized mode for set with id=${set.id} and studied rest: $it")
+                            null
+                        }
+                    }
+                    .filterNotNull()
+                    .filter { it.second.enabled }
+                    .map { StudiedMode(it.second, it.first.startDate, it.first.finishDate, it.first.formattedScore) }
+                    .toList()
 
             StudiedSet(set.id, set.title, set.url, set.createdDate, set.publishedDate, studiedModes)
         }
     }
 
-    private fun defineModeType(mode: String): ModeType {
+    private fun defineModeType(mode: String): ModeType? {
         return ModeType.modeTypeByDesignation(mode)
     }
 

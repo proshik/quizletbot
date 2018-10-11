@@ -10,7 +10,7 @@ class ModeTypeTest {
     fun modeTypeByDesignationSuccess() {
         val actualResult = ModeType.modeTypeByDesignation()
 
-        assertEquals(10, actualResult.size)
+        assertEquals(13, actualResult.size)
         assertEquals(ModeType.WRITE, actualResult["mobile_learn"])
     }
 

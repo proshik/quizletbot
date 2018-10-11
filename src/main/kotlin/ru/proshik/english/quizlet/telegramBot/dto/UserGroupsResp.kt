@@ -7,5 +7,5 @@ data class UserGroupsResp(val id: Long,
                           val name: String,
                           @JsonProperty("created_date") val createdDate: Long,
                           val school: GroupSchoolResp?,
-                          val sets: List<SetResp>,
-                          val members: List<GroupMemberResp>)
+                          val sets: List<SetResp> = emptyList(),
+                          val members: List<GroupMemberResp> = emptyList())

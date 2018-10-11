@@ -1,15 +1,20 @@
 package ru.proshik.english.quizlet.telegramBot.service.vo
 
 enum class ModeType(val title: String,
-                    val designations: List<String>) {
+                    val designations: List<String>,
+                    val enabled: Boolean) {
 
-    LEARN("Learn", listOf("learning_assistant")),
-    FLASHCARDS("Flashcards", listOf("flashcards", "mobile_cards")),
-    WRITE("Write", listOf("learn", "mobile_learn")),
-    SPELL("Spell", listOf("speller")),
-    TEST("Test", listOf("test")),
-    MATCH("Match", listOf("scatter", "mobile_scatter")),
-    GRAVITY("Gravity", listOf("gravity"));
+    // I don't know what mode type for follow modes: review, live, bismarck, spacerace, voicerace
+    // I'm not sure about the mode vscatter, but I put that in the MATCH mode type
+
+    LEARN("Learn", listOf("learning_assistant"), true),
+    FLASHCARDS("Flashcards", listOf("flashcards", "mobile_cards"), true),
+    WRITE("Write", listOf("learn", "mobile_learn"), true),
+    SPELL("Spell", listOf("speller"), true),
+    TEST("Test", listOf("test"), true),
+    MATCH("Match", listOf("scatter", "mobile_scatter", "microscatter", "vscatter"), true),
+    GRAVITY("Gravity", listOf("gravity"), true),
+    SPACERACE("Space Race", listOf("spacerace"), false);
 
     companion object {
 
@@ -24,8 +29,8 @@ enum class ModeType(val title: String,
                     .flatMap(ModeType::designations)
         }
 
-        fun modeTypeByDesignation(designation: String): ModeType {
-            return modeTypeByDesignation().asSequence().filter { entry -> entry.key == designation }.first().value
+        fun modeTypeByDesignation(designation: String): ModeType? {
+            return modeTypeByDesignation().asSequence().firstOrNull { entry -> entry.key == designation }?.value
         }
 
         fun modeTypeByDesignation(): Map<String, ModeType> {
