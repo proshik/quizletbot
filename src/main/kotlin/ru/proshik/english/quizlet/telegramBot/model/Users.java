@@ -13,6 +13,9 @@ public class Users {
 
     private String accessToken;
 
+    //  --   enabled_modes        text           NOT NULL,
+    //  --   operation_data jsonb,
+
     public Users() {
     }
 

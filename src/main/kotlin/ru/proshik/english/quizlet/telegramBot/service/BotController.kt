@@ -9,7 +9,6 @@ import org.telegram.telegrambots.meta.api.objects.replykeyboard.ReplyKeyboardMar
 import org.telegram.telegrambots.meta.api.objects.replykeyboard.buttons.KeyboardRow
 import ru.proshik.english.quizlet.telegramBot.service.BotController.GreetingsMenu.AUTHORIZE
 import ru.proshik.english.quizlet.telegramBot.service.BotController.MainMenu.*
-import ru.proshik.english.quizlet.telegramBot.service.BotController.NotificationMenu.*
 import ru.proshik.english.quizlet.telegramBot.service.operation.StudyOperationExecutor
 import ru.proshik.english.quizlet.telegramBot.service.vo.CommandType
 import ru.proshik.english.quizlet.telegramBot.service.vo.CommandType.*
@@ -30,13 +29,14 @@ class BotController(private val studyOperation: StudyOperationExecutor,
     enum class MainMenu(val title: String) {
         STUDIED("\uD83D\uDCCA Your Study Sets"),
         NOTIFICATIONS("\uD83D\uDCEC Notifications"),
-        ACCOUNT("👤 Account");
+        SETTINGS("⚙ Settings");
     }
 
     enum class NotificationMenu(val title: String) {
-        REMINDING("Reminding about doesn't studied sets"),
+        REMINDING("\uD83D\uDCE9 Go to learn"),
+        STUDY_ACTIVITY("\uD83D\uDCD1 Study activity"),
         ANNOUNCEMENT("\uD83D\uDCE9 New sets available"),
-        MAIN_MENU("Main menu");
+        BACK_TO_MAIN_MENU("Main menu");
     }
 
     companion object {
@@ -123,7 +123,7 @@ class BotController(private val studyOperation: StudyOperationExecutor,
 
     @Transactional
     fun handleOperation(chatId: Long, messageId: Int, text: String): BotApiMethod<out Serializable> {
-        if (text == AUTHORIZE.title){
+        if (text == AUTHORIZE.title) {
             if (userService.isAuthorized(chatId))
                 return buildMessage(chatId, ALREADY_AUTHORIZED, buildMainMenu())
 
@@ -141,10 +141,10 @@ class BotController(private val studyOperation: StudyOperationExecutor,
             NOTIFICATIONS.title -> {
                 buildMessage(chatId, OPERATION_DOES_NOT_IMPLEMENT, buildMainMenu())
             }
-            ACCOUNT.title -> {
+            SETTINGS.title -> {
                 buildMessage(chatId, OPERATION_DOES_NOT_IMPLEMENT, buildMainMenu())
             }
-            MAIN_MENU.title -> {
+            NotificationMenu.BACK_TO_MAIN_MENU.title -> {
                 buildMessage(chatId, MAIN_MENU_MESSAGE, buildMainMenu())
             }
             else -> {
