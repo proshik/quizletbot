@@ -1,7 +1,7 @@
 package ru.proshik.english.quizlet.telegramBot.service
 
-import kotlinx.coroutines.experimental.GlobalScope
-import kotlinx.coroutines.experimental.launch
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.apache.log4j.Logger
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
