@@ -239,9 +239,9 @@ class MessageBuilder {
         if (itemIds.size > 5) {
             if (selectedItem > 3 && selectedItem < (itemIds.size - 2)) {
                 row.add(InlineKeyboardButton().setText("« 1").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[0]}"))
-                row.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem - 1]}"))
+                row.add(InlineKeyboardButton().setText("${selectedItem - 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem - 2]}"))
                 row.add(InlineKeyboardButton().setText("·$selectedItem·").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem]}"))
-                row.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem + 1]}"))
+                    row.add(InlineKeyboardButton().setText("${selectedItem + 1}").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds[selectedItem]}"))
                 row.add(InlineKeyboardButton().setText("${itemIds.size} »").setCallbackData("$prefix;$PAGING_BY_ITEMS;${itemIds.last()}"))
             } else {
                 if (selectedItem < 4) {

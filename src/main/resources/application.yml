@@ -29,8 +29,9 @@ server:
 info:
   app:
     name: ${spring.application.name}
-    version: ${parent.version}
+    version: ${project.version}
 
+# Custom properties
 quizlet:
   client-id: ${QUIZLET_CLIENT_ID}
   response-type: code
@@ -43,3 +44,4 @@ telegram:
   username: ${TELEGRAM_USERNAME}
   token: ${TELEGRAM_TOKEN}
   max-threads: ${TELEGRAM_MAX_THREAD:1}
+
