@@ -61,6 +61,7 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
     }
 
     override fun getBotToken(): String {
+
         return token
     }
 
