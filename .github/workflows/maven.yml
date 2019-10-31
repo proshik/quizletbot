@@ -12,7 +12,7 @@ jobs:
       - name: Set up openjdk11
         uses: joschi/setup-jdk@v1
         with:
-          java-version: 'openjdk11'
-          architecture: 'x64' // defaults to 'x64'
+          java-version: openjdk11
+          architecture: x64 // defaults to 'x64'
       - name: Build with Maven
         run: mvn -B package --file pom.xml
