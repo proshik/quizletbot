@@ -1,5 +1,7 @@
 package ru.proshik.english.quizlet.telegramBot.service
 
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 import org.apache.log4j.Logger
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.stereotype.Component
@@ -59,6 +61,7 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
     }
 
     override fun getBotToken(): String {
+
         return token
     }
 
@@ -107,7 +110,9 @@ class TelegramBot(@Value("\${telegram.token}") private val token: String,
     }
 
     private fun message(update: Update): BotApiMethod<out Serializable> {
-        sendMessage(SendChatAction().setChatId(update.message.chatId).setAction(ActionType.TYPING))
+        GlobalScope.launch {
+            sendMessage(SendChatAction().setChatId(update.message.chatId).setAction(ActionType.TYPING))
+        }
 
         val chatId = update.message.chatId
         val text = update.message.text

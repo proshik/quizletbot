@@ -1,1 +1,1 @@
-web: java -jar target/quizlet_bot-0.0.1-SNAPSHOT.jar -Dspring.server.port=$PORT
+web: java -jar target/*.jar -Dspring.server.port=$PORT

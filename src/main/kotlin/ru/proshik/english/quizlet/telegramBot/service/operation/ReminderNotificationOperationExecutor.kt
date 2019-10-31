@@ -9,8 +9,11 @@ import java.io.Serializable
 class ReminderNotificationOperationExecutor : OperationExecutor {
 
     enum class StepType {
-        DAY_OF_WEEK,
-        HOUR_OF_DAY
+        ACTION,
+        ADD_DAY_OF_WEEK,
+        ADD_HOUR_OF_DAY,
+        ADD_RESULT,
+        DELETE_
     }
 
     override fun init(chatId: Long): BotApiMethod<out Serializable> {
